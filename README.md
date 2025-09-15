@@ -13,7 +13,7 @@ For many of these AI platform capabilities, there are multiple alternative techn
 
 In this sample we've tried to choose tools that are popular with our customers, and keep the code simple (avoid introducing extra abstraction layers) - so switching where needed would require some effort but should be reasonably straightforward. The overall architecture is as shown below:
 
-![alt text](assets/Platform_Arch.jpg)
+![alt text](assets/platform_arch.jpg)
 
 ## Generative AI Foundations
 
