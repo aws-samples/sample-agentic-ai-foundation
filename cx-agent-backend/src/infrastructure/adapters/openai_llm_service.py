@@ -11,6 +11,8 @@ class OpenAILLMService(LLMService):
     """OpenAI implementation of LLM service."""
 
     def __init__(self, api_key: str, model: str, base_url: str | None = None):
+        self.api_key = api_key
+        self.base_url = base_url
         self.model = ChatOpenAI(
             api_key=api_key,
             base_url=base_url,

@@ -37,7 +37,16 @@ class LangGraphAgentService(AgentService):
 
     def _create_agent(self, agent_type: AgentType, model: str) -> any:
         """Create agent with specific model."""
-        llm = self._llm_service.model
+        from langchain_openai import ChatOpenAI
+        
+        # Create LLM with the specified model
+        llm = ChatOpenAI(
+            api_key=self._llm_service.api_key,
+            base_url=self._llm_service.base_url,
+            model=model,
+            temperature=0.7,
+            streaming=True,
+        )
 
         prompts = {
             AgentType.CUSTOMER_SERVICE: "You are a helpful customer service agent.",
