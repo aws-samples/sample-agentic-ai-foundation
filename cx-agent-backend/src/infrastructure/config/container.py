@@ -1,0 +1,67 @@
+"""Dependency injection container."""
+
+import json
+from dependency_injector import containers, providers
+
+from domain.services.conversation_service import ConversationService
+from infrastructure.adapters.memory_conversation_repository import (
+    MemoryConversationRepository,
+)
+from infrastructure.adapters.langgraph_agent_service import LangGraphAgentService
+from infrastructure.adapters.bedrock_guardrail_service import BedrockGuardrailService
+from infrastructure.adapters.openai_llm_service import OpenAILLMService
+from infrastructure.config.settings import settings
+from infrastructure.aws.secret_reader import AWSSecretsReader
+from infrastructure.aws.parameter_store_reader import AWSParameterStoreReader
+
+
+class Container(containers.DeclarativeContainer):
+    """Dependency injection container."""
+
+    # Configuration
+    config = providers.Configuration()
+    secret_reader = AWSSecretsReader()
+    parameter_store_reader = AWSParameterStoreReader()
+
+    gateway_secret = json.loads(secret_reader.read_secret("gateway_credentials"))
+    langfuse_secret = json.loads(secret_reader.read_secret("langfuse_credentials"))
+
+    # Repositories
+    conversation_repository = providers.Singleton(MemoryConversationRepository)
+
+    # Services
+    guardrail_service = (
+        providers.Singleton(
+            BedrockGuardrailService,
+            guardrail_id=parameter_store_reader.get_parameter("/amazon/guardrail_id"),
+            region=settings.aws_region,
+        )
+        if settings.guardrails_enabled
+        else providers.Object(None)
+    )
+
+    llm_service = providers.Singleton(
+        OpenAILLMService,
+        api_key=gateway_secret["api_key"],
+        base_url=gateway_secret["gateway_url"],
+        model=settings.default_model,
+    )
+
+    agent_service = providers.Singleton(
+        LangGraphAgentService,
+        langfuse_config={
+            "enabled": settings.langfuse_enabled,
+            "secret_key": langfuse_secret["langfuse_secret_key"],
+            "public_key": langfuse_secret["langfuse_public_key"],
+            "host": langfuse_secret["langfuse_host"],
+        },
+        guardrail_service=guardrail_service,
+        llm_service=llm_service,
+    )
+
+    conversation_service = providers.Factory(
+        ConversationService,
+        conversation_repo=conversation_repository,
+        agent_service=agent_service,
+        guardrail_service=guardrail_service,
+    )
