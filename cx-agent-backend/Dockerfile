@@ -22,4 +22,4 @@ ENV PYTHONPATH="/app/src"
 EXPOSE 8080
 
 # Start the CX Agent service
-CMD ["python", "src/run.py"]
+CMD ["opentelemetry-instrument", "python", "src/run.py"]

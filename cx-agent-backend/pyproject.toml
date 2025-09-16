@@ -18,6 +18,7 @@ dependencies = [
     "structlog>=23.2.0",
     "dependency-injector>=4.41.0",
     "tavily-python>=0.3.0",
+    "aws-opentelemetry-distro>=0.1.0",
 ]
 
 [project.optional-dependencies]
