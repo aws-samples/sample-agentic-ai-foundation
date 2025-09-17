@@ -76,7 +76,6 @@ terraform.tfvars
 
 # Dependencies
 node_modules/
-uv.lock
 
 # Temporary files
 *.tmp
