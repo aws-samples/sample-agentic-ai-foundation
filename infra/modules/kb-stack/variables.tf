@@ -3,11 +3,6 @@ variable "name" {
   type        = string
 }
 
-variable "bucket_name" {
-  description = "S3 bucket name for knowledge base data"
-  type        = string
-}
-
 variable "kb_model_arn" {
   description = "ARN of the embedding model for the knowledge base"
   type        = string

@@ -1,6 +1,6 @@
 # S3 Bucket for Knowledge Base
 resource "aws_s3_bucket" "kb_bucket" {
-  bucket = var.bucket_name
+  bucket_prefix = var.name
 }
 
 resource "aws_s3_bucket_public_access_block" "kb_bucket_pab" {

@@ -16,10 +16,6 @@ variable "kb_stack_name" {
   type        = string
 }
 
-variable "kb_bucket_name" {
-  description = "S3 bucket name for knowledge base data"
-  type        = string
-}
 
 variable "kb_model_arn" {
   description = "ARN of the embedding model for the knowledge base"
