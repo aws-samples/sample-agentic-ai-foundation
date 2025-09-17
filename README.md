@@ -65,19 +65,18 @@ Explore the README.md file under the **infra** directory for more details on the
 
 ### Test locally
 
-1. **Initialize the project**:
+1. **Initialize the project and dependencies**:
 ```bash
 cd cx-agent-backend
-pip install uv
-uv init
+uv venv
+uv sync --all-extras --frozen
 ```
-2. **Install dependencies**: `uv sync --frozen`
-3. **Run locally**: 
+2. **Run locally**: 
 ```bash
 cd src
 uv run run.py
 ```
-4. **Test the health endpoint**:
+3. **Test the health endpoint**:
 ```bash
 curl http://localhost:8080/ping
 ```
@@ -106,6 +105,8 @@ curl -X POST http://localhost:8080/api/v1/feedback \
 5. **Run the Streamlit app**:
 ```bash
 cd cx-agent-frontend
+uv venv
+uv sync --frozen
 uv run streamlit run src/app.py --server.port 8501 --server.address 127.0.0.1
 ```
 6. Access the web interface at `http://localhost:8501`

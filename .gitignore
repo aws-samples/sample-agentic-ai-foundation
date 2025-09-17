@@ -54,6 +54,7 @@ logs/
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
+backend.hcl
 terraform.tfvars
 
 # AWS
