@@ -16,7 +16,7 @@ logger = structlog.get_logger()
 class BedrockGuardrailService(GuardrailService):
     """Bedrock Guardrails implementation."""
 
-    def __init__(self, guardrail_id: str, region: str = "us-east-1"):
+    def __init__(self, guardrail_id: str, region: str | None = None):
         self._guardrail_id = guardrail_id
         self._client = boto3.client("bedrock-runtime", region_name=region)
 

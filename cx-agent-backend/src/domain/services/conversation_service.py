@@ -30,7 +30,7 @@ class ConversationService:
         return conversation
 
     async def send_message(
-        self, conversation_id: UUID, content: str, model: str = "gpt-4o-mini"
+        self, conversation_id: UUID, content: str, model: str
     ) -> tuple[Message, list[str]]:
         """Send a message and get AI response."""
         # Get conversation

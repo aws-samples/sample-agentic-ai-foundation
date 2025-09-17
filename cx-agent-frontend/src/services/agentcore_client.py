@@ -18,7 +18,7 @@ class AgentCoreClient:
         """Create a new conversation session."""
         return str(uuid.uuid4())
     
-    def send_message(self, conversation_id: str, message: str, model: str = None) -> dict:
+    def send_message(self, conversation_id: str, message: str) -> dict:
         """Send message to AgentCore and get response."""
         try:
             escaped_agent_arn = urllib.parse.quote(self.agent_runtime_arn, safe='')
