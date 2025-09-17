@@ -8,11 +8,6 @@ user_pool_name = "agentic-ai-user-pool"
 kb_stack_name = "agentic-ai-kb"
 kb_bucket_name = "agentic-ai-kb-bucket"
 
-# Zendesk Variables
-zendesk_domain = "your-subdomain"
-zendesk_email = "your-email@example.com"
-zendesk_api_token = "your-zendesk-api-token"
-
 # Langfuse Variables
 langfuse_host = "https://cloud.langfuse.com"
 langfuse_public_key = "your-langfuse-public-key"
@@ -22,5 +17,10 @@ langfuse_secret_key = "your-langfuse-secret-key"
 gateway_url = "https://your-gateway-url.example.com"
 gateway_api_key = "your-gateway-api-key"
 
-# Tavily Variables
-tavily_api_key = "your-tavily-api-key"
+# Tavily (Optional, for agent web search tool)
+# tavily_api_key = "your-tavily-api-key"
+
+# Zendesk (Optional, for agent ticketing tool)
+# zendesk_domain = "your-subdomain"
+# zendesk_email = "your-email@example.com"
+# zendesk_api_token = "your-zendesk-api-token"
