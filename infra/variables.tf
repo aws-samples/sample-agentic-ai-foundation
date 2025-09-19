@@ -16,10 +16,6 @@ variable "kb_stack_name" {
   type        = string
 }
 
-variable "kb_bucket_name" {
-  description = "S3 bucket name for knowledge base data"
-  type        = string
-}
 
 variable "kb_model_arn" {
   description = "ARN of the embedding model for the knowledge base"
@@ -30,16 +26,19 @@ variable "kb_model_arn" {
 # Zendesk Variables
 variable "zendesk_domain" {
   description = "Zendesk domain"
+  default     = ""
   type        = string
 }
 
 variable "zendesk_email" {
   description = "Zendesk email"
+  default     = ""
   type        = string
 }
 
 variable "zendesk_api_token" {
   description = "Zendesk API token"
+  default     = ""
   type        = string
   sensitive   = true
 }
@@ -47,16 +46,19 @@ variable "zendesk_api_token" {
 # Langfuse Variables
 variable "langfuse_host" {
   description = "Langfuse host"
+  default     = "https://cloud.langfuse.com"
   type        = string
 }
 
 variable "langfuse_public_key" {
   description = "Langfuse public key"
+  default     = ""
   type        = string
 }
 
 variable "langfuse_secret_key" {
   description = "Langfuse secret key"
+  default     = ""
   type        = string
   sensitive   = true
 }
@@ -76,6 +78,7 @@ variable "gateway_api_key" {
 # Tavily Variables
 variable "tavily_api_key" {
   description = "Tavily API key"
+  default     = ""
   type        = string
   sensitive   = true
 }

@@ -1,4 +1,5 @@
 """Application settings using Pydantic Settings."""
+from os import environ
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -22,10 +23,16 @@ class Settings(BaseSettings):
     debug: bool = Field(default=False, description="Debug mode")
 
     # LLM Settings
-    default_model: str = Field(default="gpt-4o-mini", description="Default LLM model")
+    default_model: str = Field(
+        default="us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+        description="Default LLM model",
+    )
 
     # AWS Settings
-    aws_region: str = Field(default="us-east-1", description="AWS region")
+    aws_region: str = Field(
+        default=environ.get("AWS_REGION", environ.get("AWS_DEFAULT_REGION", "us-east-1")),
+        description="AWS region",
+    )
 
     # Logging
     log_level: str = Field(default="INFO", description="Log level")

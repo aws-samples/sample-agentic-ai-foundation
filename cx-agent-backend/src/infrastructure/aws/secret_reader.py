@@ -4,7 +4,7 @@ from domain.ports.secret_reader import SecretReader
 from infrastructure.config.settings import settings
 
 class AWSSecretsReader(SecretReader):
-    def read_secret(self, name: str, region: str = "us-east-1") -> str:
+    def read_secret(self, name: str) -> str:
         client = boto3.client("secretsmanager", region_name=settings.aws_region)
         try:
             response = client.get_secret_value(SecretId=name)

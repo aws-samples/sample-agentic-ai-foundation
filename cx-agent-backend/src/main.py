@@ -79,7 +79,7 @@ def create_app() -> FastAPI:
         internal_request = SendMessageRequest(
             prompt=prompt,
             conversation_id=None,
-            model="gpt-4o-mini"
+            model=settings.default_model
         )
         
         # Call internal endpoint

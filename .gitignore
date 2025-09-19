@@ -54,6 +54,7 @@ logs/
 *.tfstate.*
 .terraform/
 .terraform.lock.hcl
+backend.hcl
 terraform.tfvars
 
 # AWS
@@ -75,7 +76,6 @@ terraform.tfvars
 
 # Dependencies
 node_modules/
-uv.lock
 
 # Temporary files
 *.tmp
