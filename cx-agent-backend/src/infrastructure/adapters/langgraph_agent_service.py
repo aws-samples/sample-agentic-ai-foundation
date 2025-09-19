@@ -39,11 +39,14 @@ class LangGraphAgentService(AgentService):
         """Create agent with specific model."""
         from langchain_openai import ChatOpenAI
         
+        # Remove vendor prefix if present (format: vendor/model)
+        processed_model = model.split("/", 1)[-1] if "/" in model else model
+        
         # Create LLM with the specified model
         llm = ChatOpenAI(
             api_key=self._llm_service.api_key,
             base_url=self._llm_service.base_url,
-            model=model,
+            model=processed_model,
             temperature=0.7,
             streaming=True,
         )

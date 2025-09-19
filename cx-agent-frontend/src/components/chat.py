@@ -75,8 +75,9 @@ def render_sidebar():
         model = st.selectbox(
             "Model",
             options=[
-                "gpt-4o-mini",
-                "gpt-4o",
+                "bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+                "openai/gpt-4o-mini",
+                "openai/gpt-4o",
                 "bedrock/anthropic.claude-3-5-sonnet-20240620-v1:0",
                 "bedrock/anthropic.claude-3-5-haiku-20241022-v1:0",
             ],
