@@ -112,9 +112,14 @@ def main():
 
         # Send message and get response
         with st.spinner("Thinking..."):
-            response = client.send_message(
-                st.session_state.conversation_id, prompt, model
-            )
+            if isinstance(client, AgentCoreClient):
+                response = client.send_message(
+                    st.session_state.conversation_id, prompt, model
+                )
+            else:
+                response = client.send_message(
+                    st.session_state.conversation_id, prompt, model
+                )
 
             if response:
                 # Debug: Show what we received

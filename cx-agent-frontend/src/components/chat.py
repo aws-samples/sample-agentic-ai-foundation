@@ -4,9 +4,11 @@ import streamlit as st
 
 from models.message import Message
 from services.conversation_client import ConversationClient
+from services.agentcore_client import AgentCoreClient
+from typing import Union
 
 
-def render_message(message: Message, client: ConversationClient = None):
+def render_message(message: Message, client: Union[ConversationClient, AgentCoreClient] = None):
     """Render a single message."""
     with st.chat_message(message.role):
         st.write(message.content)
@@ -28,10 +30,27 @@ def render_message(message: Message, client: ConversationClient = None):
                 
                 with col1:
                     if st.button("👍 Helpful", key=f"up_{message_id}", use_container_width=True):
-                        if client.submit_feedback(message_id, st.session_state.get("conversation_id", "default"), 1.0, ""):
-                            st.session_state[feedback_key] = True
-                            st.success("✓ Thank you for your feedback!")
-                            st.rerun()
+                        st.session_state[f"show_pos_form_{message_id}"] = True
+                        st.rerun()
+                    
+                    if st.session_state.get(f"show_pos_form_{message_id}", False):
+                        feedback_text = st.text_input(
+                            "What did you like? (optional)",
+                            key=f"pos_text_{message_id}",
+                            placeholder="What was helpful about this response?"
+                        )
+                        col_submit, col_cancel = st.columns([1, 1])
+                        with col_submit:
+                            if st.button("✓", key=f"pos_submit_{message_id}", type="primary", help="Submit feedback"):
+                                if client.submit_feedback(message_id, st.session_state.get("conversation_id", "default"), 1.0, feedback_text):
+                                    st.session_state[feedback_key] = True
+                                    st.session_state[f"show_pos_form_{message_id}"] = False
+                                    st.success("✓ Thank you for your feedback!")
+                                    st.rerun()
+                        with col_cancel:
+                            if st.button("✗", key=f"pos_cancel_{message_id}", help="Cancel"):
+                                st.session_state[f"show_pos_form_{message_id}"] = False
+                                st.rerun()
                 
                 with col2:
                     if st.button("👎 Not helpful", key=f"down_{message_id}", use_container_width=True):

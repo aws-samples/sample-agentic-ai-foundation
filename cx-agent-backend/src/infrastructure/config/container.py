@@ -64,4 +64,10 @@ class Container(containers.DeclarativeContainer):
         conversation_repo=conversation_repository,
         agent_service=agent_service,
         guardrail_service=guardrail_service,
+        langfuse_config={
+            "enabled": settings.langfuse_enabled,
+            "secret_key": langfuse_secret["langfuse_secret_key"],
+            "public_key": langfuse_secret["langfuse_public_key"],
+            "host": langfuse_secret["langfuse_host"],
+        },
     )

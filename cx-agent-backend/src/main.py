@@ -68,18 +68,20 @@ def create_app() -> FastAPI:
         # Extract session information
         session_id = http_request.headers.get("x-amzn-bedrock-agentcore-runtime-session-id", "N/A")
         
-        # Extract prompt from input object
+        # Extract data from input object
         input_data = request.get("input", {})
-        prompt = input_data.get("prompt", "")
+        prompt = input_data.get("prompt")
+        feedback = input_data.get("feedback")
         
-        if not prompt:
-            raise HTTPException(status_code=400, detail="No prompt found in input. Please provide a 'prompt' key in the input.")
+        if not prompt and not feedback:
+            raise HTTPException(status_code=400, detail="Either prompt or feedback must be provided in input.")
         
         # Convert to internal format
         internal_request = SendMessageRequest(
             prompt=prompt,
             conversation_id=None,
-            model=settings.default_model
+            model=settings.default_model,
+            feedback=feedback
         )
         
         # Call internal endpoint

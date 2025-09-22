@@ -100,12 +100,28 @@ async def send_message(
         Provide[Container.conversation_service]
     ),
 ) -> SendMessageResponse:
-    """Process agent invocation."""
+    """Process agent invocation with optional feedback."""
     try:
+        # Process feedback if provided
+        if request.feedback:
+            feedback_score = 1 if request.feedback.score > 0.5 else 0
+            await conversation_service.log_feedback(
+                "default_user", 
+                request.feedback.session_id, 
+                request.feedback.run_id, 
+                feedback_score, 
+                request.feedback.comment
+            )
+        
+        # If no prompt, this is feedback-only request
+        if not request.prompt:
+            if not request.feedback:
+                raise HTTPException(status_code=400, detail="Either prompt or feedback must be provided")
+            return SendMessageResponse(response="Feedback received", tools_used=[])
+        
         # Use existing conversation or create new one
         conversation_id = request.conversation_id
         if not conversation_id:
-            # Create new conversation with default user_id
             conversation = await conversation_service.start_conversation("default_user")
             conversation_id = conversation.id
             
