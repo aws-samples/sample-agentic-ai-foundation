@@ -3,6 +3,8 @@
 import logging
 from uuid import UUID
 
+logger = logging.getLogger(__name__)
+
 from domain.entities.conversation import Conversation, Message
 from domain.repositories.conversation_repository import ConversationRepository
 from domain.services.agent_service import AgentRequest, AgentService, AgentType
@@ -112,10 +114,9 @@ class ConversationService:
         """Log user feedback to Langfuse."""
         import sys
         
-        # Write to both stdout and stderr
+        # Log feedback attempt
         feedback_msg = f"[FEEDBACK] Attempting to log feedback - user_id: {user_id}, session_id: {session_id}, message_id: {message_id}, score: {score}"
-        print(feedback_msg)
-        print(feedback_msg, file=sys.stderr)
+        logger.info(feedback_msg)
         
         # Also write to a log file
         with open('tmp/feedback.log', 'a') as f:
@@ -126,10 +127,10 @@ class ConversationService:
             import os
             from langfuse import get_client, Langfuse
             
-            print(f"[FEEDBACK] Langfuse config: {self._langfuse_config}")
+            logger.info(f"[FEEDBACK] Langfuse config: {self._langfuse_config}")
             
             if self._langfuse_config.get("enabled"):
-                print("[FEEDBACK] Langfuse is enabled, setting environment variables")
+                logger.info("[FEEDBACK] Langfuse is enabled, setting environment variables")
                 os.environ["LANGFUSE_SECRET_KEY"] = self._langfuse_config.get("secret_key")
                 os.environ["LANGFUSE_PUBLIC_KEY"] = self._langfuse_config.get("public_key")
                 os.environ["LANGFUSE_HOST"] = self._langfuse_config.get("host")
@@ -137,7 +138,7 @@ class ConversationService:
                 langfuse = get_client()
                 predefined_trace_id = Langfuse.create_trace_id(seed=session_id)
                 
-                print(f"[FEEDBACK] Calling span.score_trace")
+                logger.info(f"[FEEDBACK] Calling span.score_trace")
                 with langfuse.start_as_current_span(
                     name="langchain-request",
                     trace_context={"trace_id": predefined_trace_id}
@@ -149,10 +150,10 @@ class ConversationService:
                         comment=comment
                     )
                 
-                print(f"[FEEDBACK] Successfully created score: {result}")
+                logger.info(f"[FEEDBACK] Successfully created score: {result}")
             else:
-                print("[FEEDBACK] Langfuse is not enabled in config")
+                logger.info("[FEEDBACK] Langfuse is not enabled in config")
         except Exception as e:
-            print(f"[FEEDBACK] Failed to log feedback to Langfuse: {e}")
+            logger.error(f"[FEEDBACK] Failed to log feedback to Langfuse: {e}")
             import traceback
             traceback.print_exc()
