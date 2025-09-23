@@ -164,7 +164,7 @@ class LangGraphAgentService(AgentService):
         else:
             config = RunnableConfig(
                 configurable={
-                    "thread_id": f"{request.user_id}_{request.session_id}",
+                    "thread_id": f"{request.session_id}",
                     "user_id": request.user_id,
                 },
             )
@@ -237,7 +237,7 @@ class LangGraphAgentService(AgentService):
         # Create config
         config = RunnableConfig(
             configurable={
-                "thread_id": f"{request.user_id}_{request.session_id}",
+                "thread_id": f"{request.session_id}",
                 "user_id": request.user_id,
             }
         )
