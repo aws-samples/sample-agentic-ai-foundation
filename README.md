@@ -91,13 +91,15 @@ curl -X POST http://localhost:8080/invocations \
   -H "Content-Type: application/json" \
   -d '{"input": {"prompt": "Hello", "conversation_id": "<conversation_id>"}}' 
 
-curl -X POST http://localhost:8080/api/v1/feedback \
+curl -X POST http://localhost:8080/api/v1/invocations \
   -H "Content-Type: application/json" \
   -d '{
-    "run_id": "<run-id>",
-    "session_id": "<session-id>", 
-    "score": 1.0,
-    "comment": "Great response!"
+    "feedback": {
+      "run_id": "<run-id>",
+      "session_id": "<session-id>", 
+      "score": 1.0,
+      "comment": "Great response!"
+    }
   }'
 
 

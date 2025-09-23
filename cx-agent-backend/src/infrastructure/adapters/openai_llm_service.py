@@ -3,7 +3,7 @@
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from domain.entities.conversation import Message, MessageRole
+from domain.entities.conversation import MessageRole
 from domain.services.llm_service import LLMRequest, LLMResponse, LLMService
 
 

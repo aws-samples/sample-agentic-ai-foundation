@@ -72,6 +72,7 @@ class ConversationService:
             user_id=conversation.user_id,
             model=model,
             session_id=str(conversation.id),
+            trace_id=None,  # Can be set from FastAPI layer
         )
         agent_response = await self._agent_service.process_request(agent_request)
 
@@ -126,7 +127,9 @@ class ConversationService:
         
         try:
             
-            logger.info("[FEEDBACK] Langfuse config: %s", self._langfuse_config)
+            logger.info("[FEEDBACK] Langfuse config - enabled: %s, host: %s", 
+                       self._langfuse_config.get("enabled"), 
+                       self._langfuse_config.get("host"))
             
             if self._langfuse_config.get("enabled"):
                 logger.info("[FEEDBACK] Langfuse is enabled, setting environment variables")
@@ -152,5 +155,5 @@ class ConversationService:
                 logger.info("[FEEDBACK] Successfully created score: %s", result)
             else:
                 logger.info("[FEEDBACK] Langfuse is not enabled in config")
-        except Exception:
-            logger.exception("[FEEDBACK] Failed to log feedback to Langfuse")
+        except Exception as e:
+            logger.error(f"[FEEDBACK] Failed to log feedback to Langfuse: {e}")

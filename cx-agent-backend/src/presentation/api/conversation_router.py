@@ -11,8 +11,6 @@ from infrastructure.config.container import Container
 from presentation.schemas.conversation_schemas import (
     ConversationSchema,
     CreateConversationRequest,
-    FeedbackRequest,
-    FeedbackResponse,
     MessageSchema,
     SendMessageRequest,
     SendMessageResponse,
@@ -154,25 +152,4 @@ async def get_user_conversations(
     return [_conversation_to_schema(conv) for conv in conversations]
 
 
-@router.post("/feedback", response_model=FeedbackResponse)
-@inject
-async def submit_feedback(
-    request: FeedbackRequest,
-    conversation_service: ConversationService = Depends(
-        Provide[Container.conversation_service]
-    ),
-) -> FeedbackResponse:
-    """Submit user feedback for a message."""
-    try:
-        # Convert score to 1/0 format
-        feedback_score = 1 if request.score > 0.5 else 0
-        
-        # Log feedback to Langfuse
-        await conversation_service.log_feedback("default_user", request.session_id, request.run_id, feedback_score, request.comment)
-        
-        return FeedbackResponse()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to submit feedback: {str(e)}",
-        )
+

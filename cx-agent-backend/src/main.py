@@ -2,7 +2,6 @@
 
 import structlog
 from fastapi import FastAPI, Request
-from fastapi.middleware.cors import CORSMiddleware
 
 from infrastructure.config.container import Container
 from infrastructure.config.settings import settings
@@ -60,7 +59,7 @@ def create_app() -> FastAPI:
     
     @app.post("/invocations")
     async def invocations(request: dict, http_request: Request):
-        from fastapi import HTTPException, Request
+        from fastapi import HTTPException
         from presentation.api.conversation_router import send_message
         from presentation.schemas.conversation_schemas import SendMessageRequest
         from datetime import datetime

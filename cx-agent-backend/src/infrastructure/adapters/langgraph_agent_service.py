@@ -3,7 +3,6 @@
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 import os
-import base64
 import logging
 from langgraph.prebuilt import create_react_agent
 from langfuse import get_client, Langfuse
@@ -84,6 +83,14 @@ class LangGraphAgentService(AgentService):
             request.agent_type,
         )
         
+        # Use trace_id from request if provided, otherwise create one
+        langfuse = None
+        predefined_trace_id = getattr(request, 'trace_id', None)
+        if self._langfuse_config.get("enabled"):
+            langfuse = get_client()
+            if not predefined_trace_id:
+                predefined_trace_id = Langfuse.create_trace_id(seed=request.session_id)
+        
         # Check input guardrails if enabled
         if self._guardrail_service and request.messages:
             last_user_message = None
@@ -128,8 +135,6 @@ class LangGraphAgentService(AgentService):
             os.environ["LANGFUSE_PUBLIC_KEY"] = self._langfuse_config.get("public_key")
             os.environ["LANGFUSE_HOST"] = self._langfuse_config.get("host")
             
-            langfuse = get_client()
-            predefined_trace_id = Langfuse.create_trace_id(seed=request.session_id)
             trace_id = predefined_trace_id
             
             langfuse_handler = CallbackHandler()
@@ -145,7 +150,7 @@ class LangGraphAgentService(AgentService):
                 
                 config = RunnableConfig(
                     configurable={
-                        "thread_id": f"{request.user_id}_{request.session_id}",
+                        "thread_id": f"{request.session_id}",
                         "user_id": request.user_id,
                     },
                     callbacks=[langfuse_handler],

@@ -3,14 +3,12 @@
 import boto3
 from langchain_aws import AmazonKnowledgeBasesRetriever
 from langchain_core.tools import tool
-from langchain.tools import tool as langchain_tool
 import logging
 import json
 
 from infrastructure.config.settings import settings
 from infrastructure.aws.secret_reader import AWSSecretsReader
 from infrastructure.aws.parameter_store_reader import AWSParameterStoreReader
-import os
 
 logger = logging.getLogger(__name__)
 
