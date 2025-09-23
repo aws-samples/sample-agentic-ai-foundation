@@ -1,15 +1,17 @@
 """Domain service for conversation business logic."""
 
 import logging
+import os
 from uuid import UUID
 
-logger = logging.getLogger(__name__)
+from langfuse import get_client, Langfuse
 
 from domain.entities.conversation import Conversation, Message
 from domain.repositories.conversation_repository import ConversationRepository
 from domain.services.agent_service import AgentRequest, AgentService, AgentType
 from domain.services.guardrail_service import GuardrailAssessment, GuardrailService
 
+logger = logging.getLogger(__name__)
 
 class ConversationService:
     """Service for conversation business logic."""
@@ -112,7 +114,6 @@ class ConversationService:
 
     async def log_feedback(self, user_id: str, session_id: str, message_id: str, score: int, comment: str = "") -> None:
         """Log user feedback to Langfuse."""
-        import sys
         
         # Log feedback attempt
         feedback_msg = f"[FEEDBACK] Attempting to log feedback - user_id: {user_id}, session_id: {session_id}, message_id: {message_id}, score: {score}"
@@ -124,8 +125,6 @@ class ConversationService:
             f.flush()
         
         try:
-            import os
-            from langfuse import get_client, Langfuse
             
             logger.info(f"[FEEDBACK] Langfuse config: {self._langfuse_config}")
             
@@ -153,7 +152,5 @@ class ConversationService:
                 logger.info(f"[FEEDBACK] Successfully created score: {result}")
             else:
                 logger.info("[FEEDBACK] Langfuse is not enabled in config")
-        except Exception as e:
-            logger.error(f"[FEEDBACK] Failed to log feedback to Langfuse: {e}")
-            import traceback
-            traceback.print_exc()
+        except Exception:
+            logger.exception(f"[FEEDBACK] Failed to log feedback to Langfuse")
