@@ -52,18 +52,28 @@ class CreateConversationRequest(BaseModel):
     metadata: dict[str, str] = Field(default_factory=dict)
 
 
+class FeedbackRequest(BaseModel):
+    """Feedback request."""
+
+    run_id: str = Field(..., min_length=1, description="Message ID to record feedback for")
+    session_id: str = Field(..., min_length=1, description="Session ID for the conversation")
+    score: float = Field(..., ge=0.0, le=1.0, description="Feedback score between 0.0 and 1.0")
+    comment: str = Field(default="", max_length=1000, description="Optional feedback comment")
+
+
 class SendMessageRequest(BaseModel):
     """Send message request."""
 
-    prompt: str = Field(..., min_length=1, max_length=10000)
+    prompt: str | None = Field(None, min_length=1, max_length=10000)
     conversation_id: UUID | None = None
     model: str = Field(default="gpt-4o-mini", min_length=1)
+    feedback: FeedbackRequest | None = None
 
 
 class SendMessageResponse(BaseModel):
     """Send message response."""
 
-    response: str
+    response: str | None = None
     status: str = "success"
     tools_used: list[str] = Field(default_factory=list)
 
@@ -80,15 +90,6 @@ class ErrorResponse(BaseModel):
     error: str
     detail: str | None = None
     timestamp: datetime = Field(default_factory=datetime.now)
-
-
-class FeedbackRequest(BaseModel):
-    """Feedback request."""
-
-    run_id: str = Field(..., min_length=1, description="Message ID to record feedback for")
-    session_id: str = Field(..., min_length=1, description="Session ID for the conversation")
-    score: float = Field(..., ge=0.0, le=1.0, description="Feedback score between 0.0 and 1.0")
-    comment: str = Field(default="", max_length=1000, description="Optional feedback comment")
 
 
 class FeedbackResponse(BaseModel):

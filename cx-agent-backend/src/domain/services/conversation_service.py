@@ -1,12 +1,17 @@
 """Domain service for conversation business logic."""
 
+import logging
+import os
 from uuid import UUID
+
+from langfuse import get_client, Langfuse
 
 from domain.entities.conversation import Conversation, Message
 from domain.repositories.conversation_repository import ConversationRepository
 from domain.services.agent_service import AgentRequest, AgentService, AgentType
 from domain.services.guardrail_service import GuardrailAssessment, GuardrailService
 
+logger = logging.getLogger(__name__)
 
 class ConversationService:
     """Service for conversation business logic."""
@@ -67,6 +72,7 @@ class ConversationService:
             user_id=conversation.user_id,
             model=model,
             session_id=str(conversation.id),
+            trace_id=None,  # Can be set from FastAPI layer
         )
         agent_response = await self._agent_service.process_request(agent_request)
 
@@ -109,23 +115,40 @@ class ConversationService:
 
     async def log_feedback(self, user_id: str, session_id: str, message_id: str, score: int, comment: str = "") -> None:
         """Log user feedback to Langfuse."""
+        
+        # Log feedback attempt
+        feedback_msg = f"[FEEDBACK] Attempting to log feedback - user_id: {user_id}, session_id: {session_id}, message_id: {message_id}, score: {score}"
+        logger.info(feedback_msg)
+        
         try:
-            import os
-            from langfuse import Langfuse
+            
+            logger.info("[FEEDBACK] Langfuse config - enabled: %s, host: %s", 
+                       self._langfuse_config.get("enabled"), 
+                       self._langfuse_config.get("host"))
             
             if self._langfuse_config.get("enabled"):
+                logger.info("[FEEDBACK] Langfuse is enabled, setting environment variables")
                 os.environ["LANGFUSE_SECRET_KEY"] = self._langfuse_config.get("secret_key")
                 os.environ["LANGFUSE_PUBLIC_KEY"] = self._langfuse_config.get("public_key")
                 os.environ["LANGFUSE_HOST"] = self._langfuse_config.get("host")
                 
-                langfuse = Langfuse()
+                langfuse = get_client()
+                predefined_trace_id = Langfuse.create_trace_id(seed=session_id)
                 
-                langfuse.create_score(
-                    trace_id=str(f"{user_id}_{session_id}"),
-                    name="user-feedback",
-                    value=score,
-                    data_type="NUMERIC",
-                    comment=comment,
-                )
+                logger.info("[FEEDBACK] Calling span.score_trace")
+                with langfuse.start_as_current_span(
+                    name="langchain-request",
+                    trace_context={"trace_id": predefined_trace_id}
+                ) as span:
+                    result = span.score_trace(
+                        name="user-feedback",
+                        value=score,
+                        data_type="NUMERIC",
+                        comment=comment
+                    )
+                
+                logger.info("[FEEDBACK] Successfully created score: %s", result)
+            else:
+                logger.info("[FEEDBACK] Langfuse is not enabled in config")
         except Exception as e:
-            print(f"Failed to log feedback to Langfuse: {e}")
+            logger.error(f"[FEEDBACK] Failed to log feedback to Langfuse: {e}")

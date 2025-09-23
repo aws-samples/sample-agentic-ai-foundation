@@ -26,13 +26,17 @@ class ConversationClient:
             return None
 
     def send_message(
-        self, conversation_id: str, content: str, model: str
+        self, conversation_id: str, content: str, model: str, feedback: Optional[Dict] = None
     ) -> Optional[Dict]:
-        """Send a message to the conversation."""
+        """Send a message to the conversation with optional feedback."""
         try:
+            payload = {"prompt": content, "conversation_id": conversation_id, "model": model}
+            if feedback:
+                payload["feedback"] = feedback
+            
             response = self.session.post(
                 f"{self.base_url}/api/v1/invocations",
-                json={"prompt": content, "conversation_id": conversation_id, "model": model},
+                json=payload,
             )
             response.raise_for_status()
             return response.json()
@@ -56,8 +60,8 @@ class ConversationClient:
         """Submit feedback for a message."""
         try:
             response = self.session.post(
-                f"{self.base_url}/api/v1/feedback",
-                json={"run_id": run_id, "session_id": session_id, "score": score, "comment": comment},
+                f"{self.base_url}/invocations",
+                json={"input": {"feedback": {"run_id": run_id, "session_id": session_id, "score": score, "comment": comment}}},
                 timeout=30
             )
             response.raise_for_status()

@@ -24,6 +24,7 @@ class AgentRequest:
     user_id: str
     model: str
     session_id: str | None = None
+    trace_id: str | None = None
 
 
 @dataclass(frozen=True)

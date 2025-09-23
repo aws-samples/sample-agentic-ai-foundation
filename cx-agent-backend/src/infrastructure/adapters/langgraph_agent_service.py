@@ -3,9 +3,9 @@
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 import os
-import base64
 import logging
 from langgraph.prebuilt import create_react_agent
+from langfuse import get_client, Langfuse
 from langfuse.langchain import CallbackHandler
 
 logger = logging.getLogger(__name__)
@@ -76,7 +76,20 @@ class LangGraphAgentService(AgentService):
 
     async def process_request(self, request: AgentRequest) -> AgentResponse:
         """Process request through appropriate agent."""
-        logger.info(f"Processing request for user {request.user_id}, session {request.session_id}, agent type {request.agent_type}")
+        logger.info(
+            "Processing request for user %s, session %s, agent type %s",
+            request.user_id,
+            request.session_id,
+            request.agent_type,
+        )
+        
+        # Use trace_id from request if provided, otherwise create one
+        langfuse = None
+        predefined_trace_id = getattr(request, 'trace_id', None)
+        if self._langfuse_config.get("enabled"):
+            langfuse = get_client()
+            if not predefined_trace_id:
+                predefined_trace_id = Langfuse.create_trace_id(seed=request.session_id)
         
         # Check input guardrails if enabled
         if self._guardrail_service and request.messages:
@@ -115,28 +128,51 @@ class LangGraphAgentService(AgentService):
         # Create config with Langfuse callback if enabled
         callbacks = []
         trace_id = None
+        response = None
 
         if self._langfuse_config.get("enabled"):
             os.environ["LANGFUSE_SECRET_KEY"] = self._langfuse_config.get("secret_key")
             os.environ["LANGFUSE_PUBLIC_KEY"] = self._langfuse_config.get("public_key")
             os.environ["LANGFUSE_HOST"] = self._langfuse_config.get("host")
             
+            trace_id = predefined_trace_id
+            
             langfuse_handler = CallbackHandler()
-            callbacks.append(langfuse_handler)
-            trace_id = str(f"{request.user_id}_{request.session_id}")
-
-        config = RunnableConfig(
-            configurable={
-                "thread_id": f"{request.user_id}_{request.session_id}",
-                "user_id": request.user_id,
-            },
-            callbacks=callbacks,
-        )
-
-        # Invoke agent
-        logger.debug(f"Invoking agent with {len(lc_messages)} messages")
-        response = await agent.ainvoke({"messages": lc_messages}, config=config)
-        logger.debug(f"Agent response contains {len(response['messages'])} messages")
+            
+            with langfuse.start_as_current_span(
+                name="langchain-request",
+                trace_context={"trace_id": predefined_trace_id}
+            ) as span:
+                span.update_trace(
+                    user_id=request.user_id,
+                    input={"messages": [msg.content for msg in request.messages]}
+                )
+                
+                config = RunnableConfig(
+                    configurable={
+                        "thread_id": f"{request.session_id}",
+                        "user_id": request.user_id,
+                    },
+                    callbacks=[langfuse_handler],
+                )
+                
+                # Invoke agent
+                logger.debug("Invoking agent with %s messages", len(lc_messages))
+                response = await agent.ainvoke({"messages": lc_messages}, config=config)
+                
+                span.update_trace(output={"response": response["messages"][-1].content if response["messages"] else ""})
+        else:
+            config = RunnableConfig(
+                configurable={
+                    "thread_id": f"{request.session_id}",
+                    "user_id": request.user_id,
+                },
+            )
+            
+            # Invoke agent
+            logger.debug("Invoking agent with %s messages", len(lc_messages))
+            response = await agent.ainvoke({"messages": lc_messages}, config=config)
+        logger.debug("Agent response contains %s messages", len(response["messages"]))
         # Extract response
         last_message = response["messages"][-1]
         tools_used = []
@@ -152,7 +188,7 @@ class LangGraphAgentService(AgentService):
                         tools_used.append(tool_call["name"])
         # Remove duplicates
         tools_used = list(set(tools_used))
-        logger.info(f"Agent completed. Tools used: {tools_used}")
+        logger.info("Agent completed. Tools used: %s", tools_used)
 
         # Check output guardrails if enabled
         if self._guardrail_service:
@@ -173,12 +209,12 @@ class LangGraphAgentService(AgentService):
             "model": request.model,
             "agent_type": request.agent_type.value,
             "trace_id": trace_id,
-            "debug_message_count": len(response["messages"]),
+            "debug_message_count": len(response["messages"]) if response else 0,
             "debug_message_types": message_types,
             "debug_tools_found": len(tools_used) > 0,
         }
 
-        logger.info(f"Returning response for session {request.session_id}")
+        logger.info("Returning response for session %s", request.session_id)
         return AgentResponse(
             content=last_message.content,
             agent_type=request.agent_type,
@@ -201,7 +237,7 @@ class LangGraphAgentService(AgentService):
         # Create config
         config = RunnableConfig(
             configurable={
-                "thread_id": f"{request.user_id}_{request.session_id}",
+                "thread_id": f"{request.session_id}",
                 "user_id": request.user_id,
             }
         )

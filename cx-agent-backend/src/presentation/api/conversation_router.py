@@ -11,8 +11,6 @@ from infrastructure.config.container import Container
 from presentation.schemas.conversation_schemas import (
     ConversationSchema,
     CreateConversationRequest,
-    FeedbackRequest,
-    FeedbackResponse,
     MessageSchema,
     SendMessageRequest,
     SendMessageResponse,
@@ -100,12 +98,28 @@ async def send_message(
         Provide[Container.conversation_service]
     ),
 ) -> SendMessageResponse:
-    """Process agent invocation."""
+    """Process agent invocation with optional feedback."""
     try:
+        # Process feedback if provided
+        if request.feedback:
+            feedback_score = 1 if request.feedback.score > 0.5 else 0
+            await conversation_service.log_feedback(
+                "default_user", 
+                request.feedback.session_id, 
+                request.feedback.run_id, 
+                feedback_score, 
+                request.feedback.comment
+            )
+        
+        # If no prompt, this is feedback-only request
+        if not request.prompt:
+            if not request.feedback:
+                raise HTTPException(status_code=400, detail="Either prompt or feedback must be provided")
+            return SendMessageResponse(response="Feedback received", tools_used=[])
+        
         # Use existing conversation or create new one
         conversation_id = request.conversation_id
         if not conversation_id:
-            # Create new conversation with default user_id
             conversation = await conversation_service.start_conversation("default_user")
             conversation_id = conversation.id
             
@@ -138,25 +152,4 @@ async def get_user_conversations(
     return [_conversation_to_schema(conv) for conv in conversations]
 
 
-@router.post("/feedback", response_model=FeedbackResponse)
-@inject
-async def submit_feedback(
-    request: FeedbackRequest,
-    conversation_service: ConversationService = Depends(
-        Provide[Container.conversation_service]
-    ),
-) -> FeedbackResponse:
-    """Submit user feedback for a message."""
-    try:
-        # Convert score to 1/0 format
-        feedback_score = 1 if request.score > 0.5 else 0
-        
-        # Log feedback to Langfuse
-        await conversation_service.log_feedback("default_user", request.session_id, request.run_id, feedback_score, request.comment)
-        
-        return FeedbackResponse()
-    except Exception as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Failed to submit feedback: {str(e)}",
-        )
+
