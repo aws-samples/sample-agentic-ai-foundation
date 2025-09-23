@@ -3,8 +3,8 @@
 import boto3
 import structlog
 
-from domain.entities.conversation import Message
-from domain.services.guardrail_service import (
+from cx_agent_backend.domain.entities.conversation import Message
+from cx_agent_backend.domain.services.guardrail_service import (
     GuardrailAssessment,
     GuardrailResult,
     GuardrailService,

@@ -4,7 +4,7 @@ from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from enum import Enum
 
-from domain.entities.conversation import Message
+from cx_agent_backend.domain.entities.conversation import Message
 
 
 class GuardrailAssessment(str, Enum):

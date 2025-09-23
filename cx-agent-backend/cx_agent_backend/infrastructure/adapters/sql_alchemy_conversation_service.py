@@ -1,13 +1,15 @@
 # infrastructure/sqlalchemy_conversation_repository.py
-from domain.repositories.conversation_repository import ConversationRepository
-from domain.entities.conversation import Conversation, Message
+import uuid
+
 from sqlalchemy.orm import Session
-from presentation.schemas.conversation_schemas import (
+
+from cx_agent_backend.domain.repositories.conversation_repository import ConversationRepository
+from cx_agent_backend.domain.entities.conversation import Conversation, Message
+from cx_agent_backend.presentation.schemas.conversation_schemas import (
     ConversationSchema,
     MessageSchema,
     ConversationUserDB,
 )  # your SQLAlchemy models
-import uuid
 
 
 class SQLAlchemyConversationRepository(ConversationRepository):

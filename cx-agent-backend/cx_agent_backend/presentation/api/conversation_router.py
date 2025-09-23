@@ -5,18 +5,17 @@ from uuid import UUID
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, status
 
-from domain.entities.conversation import Conversation, Message
-from domain.services.conversation_service import ConversationService
-from infrastructure.config.container import Container
-from presentation.schemas.conversation_schemas import (
+from cx_agent_backend.domain.entities.conversation import Conversation, Message
+from cx_agent_backend.domain.services.conversation_service import ConversationService
+from cx_agent_backend.infrastructure.config.container import Container
+from cx_agent_backend.presentation.schemas.conversation_schemas import (
     ConversationSchema,
     CreateConversationRequest,
+    HealthResponse,
     MessageSchema,
     SendMessageRequest,
     SendMessageResponse,
 )
-
-from presentation.schemas.conversation_schemas import HealthResponse
 
 router = APIRouter(prefix="/api/v1", tags=["conversations"])
 

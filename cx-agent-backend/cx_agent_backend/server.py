@@ -1,29 +1,19 @@
-"""FastAPI application entry point."""
+"""FastAPI application definition"""
 
+from datetime import datetime
+import time
+
+from fastapi import FastAPI, HTTPException, Request
 import structlog
-from fastapi import FastAPI, Request
 
-from infrastructure.config.container import Container
-from infrastructure.config.settings import settings
-from presentation.api.conversation_router import router as conversation_router
-
-# Configure structured logging
-structlog.configure(
-    processors=[
-        structlog.stdlib.filter_by_level,
-        structlog.stdlib.add_logger_name,
-        structlog.stdlib.add_log_level,
-        structlog.stdlib.PositionalArgumentsFormatter(),
-        structlog.processors.TimeStamper(fmt="iso"),
-        structlog.processors.StackInfoRenderer(),
-        structlog.processors.format_exc_info,
-        structlog.processors.UnicodeDecoder(),
-        structlog.processors.JSONRenderer(),
-    ],
-    context_class=dict,
-    logger_factory=structlog.stdlib.LoggerFactory(),
-    cache_logger_on_first_use=True,
+from cx_agent_backend.infrastructure.config.container import Container
+from cx_agent_backend.infrastructure.config.settings import settings
+from cx_agent_backend.presentation.api.conversation_router import (
+    router as conversation_router,
+    send_message
 )
+from cx_agent_backend.presentation.schemas.conversation_schemas import SendMessageRequest
+
 
 logger = structlog.get_logger()
 
@@ -44,7 +34,7 @@ def create_app() -> FastAPI:
     # Wire container
     container.wire(
         modules=[
-            "presentation.api.conversation_router",
+            "cx_agent_backend.presentation.api.conversation_router",
         ]
     )
 
@@ -54,15 +44,13 @@ def create_app() -> FastAPI:
     # Add AgentCore-compliant endpoints directly to app
     @app.get("/ping")
     async def ping():
-        import time
+        """Container health check endpoint"""
+        
         return {"status": "Healthy", "time_of_last_update": int(time.time())}
     
     @app.post("/invocations")
     async def invocations(request: dict, http_request: Request):
-        from fastapi import HTTPException
-        from presentation.api.conversation_router import send_message
-        from presentation.schemas.conversation_schemas import SendMessageRequest
-        from datetime import datetime
+        """AgentCore-compatible endpoint to invoke the agent (send message & get response)"""
         
         # Extract session information
         session_id = http_request.headers.get("x-amzn-bedrock-agentcore-runtime-session-id", "N/A")
@@ -101,6 +89,3 @@ def create_app() -> FastAPI:
     logger.info("Application created", settings=settings.model_dump())
 
     return app
-
-
-app = create_app()

@@ -2,8 +2,8 @@
 
 from uuid import UUID
 
-from domain.entities.conversation import Conversation
-from domain.repositories.conversation_repository import ConversationRepository
+from cx_agent_backend.domain.entities.conversation import Conversation
+from cx_agent_backend.domain.repositories.conversation_repository import ConversationRepository
 
 
 class MemoryConversationRepository(ConversationRepository):
