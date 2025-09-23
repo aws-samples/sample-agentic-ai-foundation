@@ -130,7 +130,7 @@ def create_support_ticket(
                 },
             }
         }
-        logger.info("Mock ticket created with ID: %s", ticket_id)
+        logger.info("Mock ticket created with ID")
         return mock_response
 
     # Real Zendesk integration
@@ -165,7 +165,7 @@ def create_support_ticket(
         
         result = response.json()
         ticket_id = result.get("ticket", {}).get("id", "unknown")
-        logger.info("Successfully created Zendesk ticket with ID: %s", ticket_id)
+        logger.info("Successfully created Zendesk ticket with ID")
         
         return result
     except requests.exceptions.RequestException as e:
