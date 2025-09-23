@@ -8,18 +8,16 @@ WORKDIR /app
 ENV UV_PROJECT_ENVIRONMENT="/usr/local/"
 ENV UV_COMPILE_BYTECODE=1
 
-# Copy dependency configuration and install Python dependencies
-COPY pyproject.toml .
-RUN uv sync
+# Install dependencies only (so this step can be cached if only source files are changed):
+COPY pyproject.toml uv.lock ./
+RUN uv sync --no-dev --no-install-local
 
-# Copy application source code
-COPY src/ ./src/
-
-# Set Python path
-ENV PYTHONPATH="/app/src"
+# Copy and install the agent source code itself:
+COPY cx_agent_backend ./cx_agent_backend
+RUN uv sync --no-dev
 
 # Expose FastAPI server port
 EXPOSE 8080
 
 # Start the CX Agent service
-CMD ["opentelemetry-instrument", "python", "src/run.py"]
+CMD ["opentelemetry-instrument", "python", "-m", "cx_agent_backend"]

@@ -1,6 +1,6 @@
 import boto3
 
-from infrastructure.config.settings import settings
+from cx_agent_backend.infrastructure.config.settings import settings
 
 
 class AWSParameterStoreReader:

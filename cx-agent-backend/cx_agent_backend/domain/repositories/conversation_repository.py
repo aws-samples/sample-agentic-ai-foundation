@@ -3,7 +3,7 @@
 from abc import ABC, abstractmethod
 from uuid import UUID
 
-from domain.entities.conversation import Conversation
+from cx_agent_backend.domain.entities.conversation import Conversation
 
 
 class ConversationRepository(ABC):

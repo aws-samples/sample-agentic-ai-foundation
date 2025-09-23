@@ -6,10 +6,10 @@ from uuid import UUID
 
 from langfuse import get_client, Langfuse
 
-from domain.entities.conversation import Conversation, Message
-from domain.repositories.conversation_repository import ConversationRepository
-from domain.services.agent_service import AgentRequest, AgentService, AgentType
-from domain.services.guardrail_service import GuardrailAssessment, GuardrailService
+from cx_agent_backend.domain.entities.conversation import Conversation, Message
+from cx_agent_backend.domain.repositories.conversation_repository import ConversationRepository
+from cx_agent_backend.domain.services.agent_service import AgentRequest, AgentService, AgentType
+from cx_agent_backend.domain.services.guardrail_service import GuardrailAssessment, GuardrailService
 
 logger = logging.getLogger(__name__)
 

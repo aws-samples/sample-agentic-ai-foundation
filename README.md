@@ -78,8 +78,7 @@ uv sync --all-extras --frozen
 ```
 2. **Run locally**: 
 ```bash
-cd src
-uv run run.py
+uv run python -m cx_agent_backend
 ```
 3. **Test the health endpoint**:
 ```bash

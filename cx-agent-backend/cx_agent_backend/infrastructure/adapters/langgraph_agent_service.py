@@ -10,16 +10,16 @@ from langfuse.langchain import CallbackHandler
 
 logger = logging.getLogger(__name__)
 
-from domain.entities.conversation import Message, MessageRole
-from domain.services.agent_service import (
+from cx_agent_backend.domain.entities.conversation import Message, MessageRole
+from cx_agent_backend.domain.services.agent_service import (
     AgentRequest,
     AgentResponse,
     AgentService,
     AgentType,
 )
-from domain.services.guardrail_service import GuardrailAssessment, GuardrailService
-from domain.services.llm_service import LLMService
-from infrastructure.adapters.tools import tools
+from cx_agent_backend.domain.services.guardrail_service import GuardrailAssessment, GuardrailService
+from cx_agent_backend.domain.services.llm_service import LLMService
+from cx_agent_backend.infrastructure.adapters.tools import tools
 
 
 class LangGraphAgentService(AgentService):

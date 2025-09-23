@@ -6,9 +6,9 @@ from langchain_core.tools import tool
 import logging
 import json
 
-from infrastructure.config.settings import settings
-from infrastructure.aws.secret_reader import AWSSecretsReader
-from infrastructure.aws.parameter_store_reader import AWSParameterStoreReader
+from cx_agent_backend.infrastructure.config.settings import settings
+from cx_agent_backend.infrastructure.aws.secret_reader import AWSSecretsReader
+from cx_agent_backend.infrastructure.aws.parameter_store_reader import AWSParameterStoreReader
 
 logger = logging.getLogger(__name__)
 

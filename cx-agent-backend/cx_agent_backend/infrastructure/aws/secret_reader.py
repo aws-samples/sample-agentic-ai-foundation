@@ -1,7 +1,7 @@
 import boto3
 
-from domain.ports.secret_reader import SecretReader
-from infrastructure.config.settings import settings
+from cx_agent_backend.domain.ports.secret_reader import SecretReader
+from cx_agent_backend.infrastructure.config.settings import settings
 
 class AWSSecretsReader(SecretReader):
     def read_secret(self, name: str) -> str:

@@ -3,8 +3,8 @@
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain_openai import ChatOpenAI
 
-from domain.entities.conversation import MessageRole
-from domain.services.llm_service import LLMRequest, LLMResponse, LLMService
+from cx_agent_backend.domain.entities.conversation import MessageRole
+from cx_agent_backend.domain.services.llm_service import LLMRequest, LLMResponse, LLMService
 
 
 class OpenAILLMService(LLMService):
