@@ -154,7 +154,7 @@ def create_support_ticket(
 
     try:
         url = f"https://{subdomain}.zendesk.com/api/v2/tickets.json"
-        logger.debug("Making POST request to: %s", url)
+        logger.debug("Making POST request to Zendesk API endpoint")
         
         response = requests.post(
             url, headers=headers, data=json.dumps({"ticket": ticket_data}), timeout=61
