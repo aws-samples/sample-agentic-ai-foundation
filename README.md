@@ -15,6 +15,11 @@ In this sample we've tried to choose tools that are popular with our customers, 
 
 ![alt text](assets/platform_arch.jpg)
 
+
+## A Sample end-2-end User Interaction Flow 
+
+![End-2-end user flow](assets/sample_sequence_diagram.png)
+
 ## Generative AI Foundations
 
 Strong foundational or "platform" capabilities increase the speed and success rate of generative and agentic AI projects. This sample demonstrates a customer service agent integrating several of these capabilities together:
@@ -110,7 +115,6 @@ uv sync --frozen
 uv run streamlit run src/app.py --server.port 8501 --server.address 127.0.0.1
 ```
 6. Access the web interface at `http://localhost:8501`
-
 
 ### Bedrock AgentCore Deployment
 
