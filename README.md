@@ -16,7 +16,7 @@ In this sample we've tried to choose tools that are popular with our customers, 
 ![alt text](assets/platform_arch.jpg)
 
 
-## A Sample end-2-end User Interaction Flow 
+**A Sample end-2-end User Interaction Flow**
 
 ![End-2-end user flow](assets/sample_sequence_diagram.png)
 
