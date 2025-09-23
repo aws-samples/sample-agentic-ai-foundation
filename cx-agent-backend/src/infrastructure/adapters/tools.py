@@ -110,7 +110,6 @@ def create_support_ticket(
         subdomain = zendesk_credentials["zendesk_domain"]
         email = zendesk_credentials["zendesk_email"]
         api_token = zendesk_credentials["zendesk_api_token"]
-        logger.debug("Retrieved Zendesk credentials for domain: %s", subdomain)
     except Exception as e:
         logger.error("Failed to retrieve Zendesk credentials: %s", str(e))
         zendesk_credentials = {}
@@ -234,7 +233,7 @@ def get_support_tickets(
 
     try:
         url = f"https://{subdomain}.zendesk.com/api/v2/tickets.json"
-        logger.debug("Making GET request to: %s", url)
+        logger.debug("Making GET request to Zendesk tickets API endpoint")
         
         response = requests.get(url, headers=headers, params=params, timeout=61)
         logger.info("Zendesk API response status: %s", response.status_code)
