@@ -120,11 +120,6 @@ class ConversationService:
         feedback_msg = f"[FEEDBACK] Attempting to log feedback - user_id: {user_id}, session_id: {session_id}, message_id: {message_id}, score: {score}"
         logger.info(feedback_msg)
         
-        # Also write to a log file
-        with open('tmp/feedback.log', 'a') as f:
-            f.write(f"{feedback_msg}\n")
-            f.flush()
-        
         try:
             
             logger.info("[FEEDBACK] Langfuse config - enabled: %s, host: %s", 
