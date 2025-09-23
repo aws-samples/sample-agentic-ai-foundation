@@ -196,7 +196,7 @@ def get_support_tickets(
         subdomain = zendesk_credentials["zendesk_domain"]
         email = zendesk_credentials["zendesk_email"]
         api_token = zendesk_credentials["zendesk_api_token"]
-        logger.debug("Retrieved Zendesk credentials for domain: %s", subdomain)
+        logger.debug("Retrieved Zendesk credentials for domain")
     except Exception as e:
         logger.error("Failed to retrieve Zendesk credentials: %s", str(e))
         zendesk_credentials = {}
