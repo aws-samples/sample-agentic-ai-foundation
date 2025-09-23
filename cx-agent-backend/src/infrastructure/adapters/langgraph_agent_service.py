@@ -77,7 +77,12 @@ class LangGraphAgentService(AgentService):
 
     async def process_request(self, request: AgentRequest) -> AgentResponse:
         """Process request through appropriate agent."""
-        logger.info(f"Processing request for user {request.user_id}, session {request.session_id}, agent type {request.agent_type}")
+        logger.info(
+            "Processing request for user %s, session %s, agent type %s",
+            request.user_id,
+            request.session_id,
+            request.agent_type,
+        )
         
         # Check input guardrails if enabled
         if self._guardrail_service and request.messages:
@@ -147,7 +152,7 @@ class LangGraphAgentService(AgentService):
                 )
                 
                 # Invoke agent
-                logger.debug(f"Invoking agent with {len(lc_messages)} messages")
+                logger.debug("Invoking agent with %s messages", len(lc_messages))
                 response = await agent.ainvoke({"messages": lc_messages}, config=config)
                 
                 span.update_trace(output={"response": response["messages"][-1].content if response["messages"] else ""})
@@ -160,9 +165,9 @@ class LangGraphAgentService(AgentService):
             )
             
             # Invoke agent
-            logger.debug(f"Invoking agent with {len(lc_messages)} messages")
+            logger.debug("Invoking agent with %s messages", len(lc_messages))
             response = await agent.ainvoke({"messages": lc_messages}, config=config)
-        logger.debug(f"Agent response contains {len(response['messages'])} messages")
+        logger.debug("Agent response contains %s messages", len(response["messages"]))
         # Extract response
         last_message = response["messages"][-1]
         tools_used = []
@@ -178,7 +183,7 @@ class LangGraphAgentService(AgentService):
                         tools_used.append(tool_call["name"])
         # Remove duplicates
         tools_used = list(set(tools_used))
-        logger.info(f"Agent completed. Tools used: {tools_used}")
+        logger.info("Agent completed. Tools used: %s", tools_used)
 
         # Check output guardrails if enabled
         if self._guardrail_service:
@@ -204,7 +209,7 @@ class LangGraphAgentService(AgentService):
             "debug_tools_found": len(tools_used) > 0,
         }
 
-        logger.info(f"Returning response for session {request.session_id}")
+        logger.info("Returning response for session %s", request.session_id)
         return AgentResponse(
             content=last_message.content,
             agent_type=request.agent_type,

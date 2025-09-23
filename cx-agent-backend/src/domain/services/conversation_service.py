@@ -126,7 +126,7 @@ class ConversationService:
         
         try:
             
-            logger.info(f"[FEEDBACK] Langfuse config: {self._langfuse_config}")
+            logger.info("[FEEDBACK] Langfuse config: %s", self._langfuse_config)
             
             if self._langfuse_config.get("enabled"):
                 logger.info("[FEEDBACK] Langfuse is enabled, setting environment variables")
@@ -137,7 +137,7 @@ class ConversationService:
                 langfuse = get_client()
                 predefined_trace_id = Langfuse.create_trace_id(seed=session_id)
                 
-                logger.info(f"[FEEDBACK] Calling span.score_trace")
+                logger.info("[FEEDBACK] Calling span.score_trace")
                 with langfuse.start_as_current_span(
                     name="langchain-request",
                     trace_context={"trace_id": predefined_trace_id}
@@ -149,8 +149,8 @@ class ConversationService:
                         comment=comment
                     )
                 
-                logger.info(f"[FEEDBACK] Successfully created score: {result}")
+                logger.info("[FEEDBACK] Successfully created score: %s", result)
             else:
                 logger.info("[FEEDBACK] Langfuse is not enabled in config")
         except Exception:
-            logger.exception(f"[FEEDBACK] Failed to log feedback to Langfuse")
+            logger.exception("[FEEDBACK] Failed to log feedback to Langfuse")

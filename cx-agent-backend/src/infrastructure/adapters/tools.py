@@ -28,10 +28,10 @@ def _get_kb_retriever():
             logger.error("Bedrock Knowledge Base ID not configured in parameter store")
             raise ValueError("Bedrock Knowledge Base ID not configured")
         
-        logger.debug(f"Retrieved Knowledge Base ID: {kb_id}")
+        logger.debug("Retrieved Knowledge Base ID: %s", kb_id)
         
         session = boto3.Session(region_name=settings.aws_region)
-        logger.debug(f"Created AWS session for region: {settings.aws_region}")
+        logger.debug("Created AWS session for region: %s", settings.aws_region)
         
         retriever = AmazonKnowledgeBasesRetriever(
             knowledge_base_id=kb_id,
@@ -46,21 +46,21 @@ def _get_kb_retriever():
         return retriever
     
     except Exception as e:
-        logger.error(f"Failed to initialize Knowledge Base retriever: {str(e)}")
+        logger.error("Failed to initialize Knowledge Base retriever: %s", str(e))
         raise
 
 
 @tool
 def retrieve_context(query: str) -> dict:
     """Retrieve context from the Knowledge Base to answer frequently asked questions."""
-    logger.info(f"Retrieving context for query: {query[:100]}...")
+    logger.info("Retrieving context for query: %s...", query[:100])
     
     try:
         retriever = _get_kb_retriever()
         logger.debug("Knowledge Base retriever initialized successfully")
         
         retrieved_docs = retriever.invoke(input=query)
-        logger.info(f"Retrieved {len(retrieved_docs)} documents from knowledge base")
+        logger.info("Retrieved %s documents from knowledge base", len(retrieved_docs))
 
         document_summaries = []
         for i, doc in enumerate(retrieved_docs, 1):
@@ -72,13 +72,13 @@ def retrieve_context(query: str) -> dict:
                 "relevance_score": doc.metadata.get("score", 0),
             }
             document_summaries.append(summary)
-            logger.debug(f"Processed document {i}: {summary['title'][:50]}...")
+            logger.debug("Processed document %s: %s...", i, summary["title"][:50])
 
-        logger.info(f"Successfully retrieved and processed {len(document_summaries)} documents")
+        logger.info("Successfully retrieved and processed %s documents", len(document_summaries))
         return {"retrieved_documents": document_summaries}
     
     except Exception as e:
-        logger.error(f"Failed to retrieve context: {str(e)}")
+        logger.error("Failed to retrieve context: %s", str(e))
         return {"retrieved_documents": [], "error": f"Knowledge base retrieval failed: {str(e)}"}
 
 
@@ -96,8 +96,13 @@ def create_support_ticket(
     import base64
     import uuid
 
-    logger.info(f"Creating support ticket with subject: {subject[:50]}...")
-    logger.debug(f"Ticket details - Priority: {priority}, Requester: {requester_name or 'N/A'} ({requester_email or 'N/A'})")
+    logger.info("Creating support ticket with subject: %s...", subject[:50])
+    logger.debug(
+        "Ticket details - Priority: %s, Requester: %s (%s)",
+        priority,
+        requester_name or "N/A",
+        requester_email or "N/A",
+    )
 
     try:
         # Get Zendesk credentials
@@ -105,9 +110,9 @@ def create_support_ticket(
         subdomain = zendesk_credentials["zendesk_domain"]
         email = zendesk_credentials["zendesk_email"]
         api_token = zendesk_credentials["zendesk_api_token"]
-        logger.debug(f"Retrieved Zendesk credentials for domain: {subdomain}")
+        logger.debug("Retrieved Zendesk credentials for domain: %s", subdomain)
     except Exception as e:
-        logger.error(f"Failed to retrieve Zendesk credentials: {str(e)}")
+        logger.error("Failed to retrieve Zendesk credentials: %s", str(e))
         zendesk_credentials = {}
         subdomain = email = api_token = None
 
@@ -128,7 +133,7 @@ def create_support_ticket(
                 },
             }
         }
-        logger.info(f"Mock ticket created with ID: {ticket_id}")
+        logger.info("Mock ticket created with ID: %s", ticket_id)
         return mock_response
 
     # Real Zendesk integration
@@ -148,29 +153,29 @@ def create_support_ticket(
             ticket_data["requester"]["email"] = requester_email
         if requester_name:
             ticket_data["requester"]["name"] = requester_name
-        logger.debug(f"Added requester info to ticket data")
+        logger.debug("Added requester info to ticket data")
 
     try:
         url = f"https://{subdomain}.zendesk.com/api/v2/tickets.json"
-        logger.debug(f"Making POST request to: {url}")
+        logger.debug("Making POST request to: %s", url)
         
         response = requests.post(
             url, headers=headers, data=json.dumps({"ticket": ticket_data}), timeout=61
         )
         
-        logger.info(f"Zendesk API response status: {response.status_code}")
+        logger.info("Zendesk API response status: %s", response.status_code)
         response.raise_for_status()
         
         result = response.json()
         ticket_id = result.get("ticket", {}).get("id", "unknown")
-        logger.info(f"Successfully created Zendesk ticket with ID: {ticket_id}")
+        logger.info("Successfully created Zendesk ticket with ID: %s", ticket_id)
         
         return result
     except requests.exceptions.RequestException as e:
-        logger.error(f"Zendesk API request failed: {str(e)}")
+        logger.error("Zendesk API request failed: %s", str(e))
         return {"error": f"Failed to create ticket: {str(e)}"}
     except Exception as e:
-        logger.error(f"Unexpected error creating ticket: {str(e)}")
+        logger.error("Unexpected error creating ticket: %s", str(e))
         return {"error": f"Failed to create ticket: {str(e)}"}
 
 
@@ -185,8 +190,8 @@ def get_support_tickets(
     import requests
     import base64
 
-    logger.info(f"Fetching support tickets - Status: {status or 'all'}, Limit: {limit}")
-    logger.debug(f"Sort parameters - By: {sort_by}, Order: {sort_order}")
+    logger.info("Fetching support tickets - Status: %s, Limit: %s", status or 'all', limit)
+    logger.debug("Sort parameters - By: %s, Order: %s", sort_by, sort_order)
 
     try:
         # Get Zendesk credentials
@@ -194,9 +199,9 @@ def get_support_tickets(
         subdomain = zendesk_credentials["zendesk_domain"]
         email = zendesk_credentials["zendesk_email"]
         api_token = zendesk_credentials["zendesk_api_token"]
-        logger.debug(f"Retrieved Zendesk credentials for domain: {subdomain}")
+        logger.debug("Retrieved Zendesk credentials for domain: %s", subdomain)
     except Exception as e:
-        logger.error(f"Failed to retrieve Zendesk credentials: {str(e)}")
+        logger.error("Failed to retrieve Zendesk credentials: %s", str(e))
         zendesk_credentials = {}
         subdomain = email = api_token = None
 
@@ -225,34 +230,34 @@ def get_support_tickets(
     params = {"sort_by": sort_by, "sort_order": sort_order, "per_page": min(limit, 100)}
     if status:
         params["status"] = status
-        logger.debug(f"Filtering by status: {status}")
+        logger.debug("Filtering by status: %s", status)
 
     try:
         url = f"https://{subdomain}.zendesk.com/api/v2/tickets.json"
-        logger.debug(f"Making GET request to: {url}")
+        logger.debug("Making GET request to: %s", url)
         
         response = requests.get(url, headers=headers, params=params, timeout=61)
-        logger.info(f"Zendesk API response status: {response.status_code}")
+        logger.info("Zendesk API response status: %s", response.status_code)
         
         response.raise_for_status()
         result = response.json()
         
         ticket_count = len(result.get("tickets", []))
-        logger.info(f"Successfully fetched {ticket_count} tickets from Zendesk")
+        logger.info("Successfully fetched %s tickets from Zendesk", ticket_count)
         
         return result
     except requests.exceptions.RequestException as e:
-        logger.error(f"Zendesk API request failed: {str(e)}")
+        logger.error("Zendesk API request failed: %s", str(e))
         return {"error": f"Failed to fetch tickets: {str(e)}"}
     except Exception as e:
-        logger.error(f"Unexpected error fetching tickets: {str(e)}")
+        logger.error("Unexpected error fetching tickets: %s", str(e))
         return {"error": f"Failed to fetch tickets: {str(e)}"}
 
 
 @tool
 def web_search(query: str) -> str:
     """Search the web for information using Tavily API."""
-    logger.info(f"Performing web search for query: {query[:100]}...")
+    logger.info("Performing web search for query: %s...", query[:100])
     
     try:
         tavily_secret = secret_reader.read_secret("tavily_key")
@@ -260,7 +265,7 @@ def web_search(query: str) -> str:
         logger.debug("Retrieved Tavily API credentials")
         logger.info(tavily_api_key)
     except Exception as e:
-        logger.error(f"Failed to retrieve Tavily credentials: {str(e)}")
+        logger.error("Failed to retrieve Tavily credentials: %s", str(e))
         tavily_api_key = None
 
     # If API key not configured, return mock response
@@ -278,19 +283,19 @@ def web_search(query: str) -> str:
         logger.debug("Tavily client initialized")
         
         response = client.search(query)
-        logger.info(f"Web search completed successfully for query: {query[:50]}...")
+        logger.info("Web search completed successfully for query: %s...", query[:50])
         
         # Log response summary without full content
         if isinstance(response, dict) and "results" in response:
             result_count = len(response.get("results", []))
-            logger.debug(f"Web search returned {result_count} results")
+            logger.debug("Web search returned %s results", result_count)
         
         return str(response)
     except ImportError as e:
-        logger.error(f"Tavily client not installed: {str(e)}")
+        logger.error("Tavily client not installed: %s", str(e))
         return f"Tavily client not installed. Mock results for: {query}"
     except Exception as e:
-        logger.error(f"Web search failed: {str(e)}")
+        logger.error("Web search failed: %s", str(e))
         return f"Web search failed: {str(e)}"
 
 
