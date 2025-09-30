@@ -2,9 +2,20 @@
 
 from datetime import datetime
 import time
+import logging
+import sys
 
 from fastapi import FastAPI, HTTPException, Request
 import structlog
+
+# Configure basic logging to terminal
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.StreamHandler(sys.stdout)
+    ]
+)
 
 from cx_agent_backend.infrastructure.config.container import Container
 from cx_agent_backend.infrastructure.config.settings import settings
@@ -74,14 +85,18 @@ def create_app() -> FastAPI:
         # Call internal endpoint
         response = await send_message(internal_request)
         
-        # Return agent contract format
-        return {
-            "output": {
-                "message": response.response,
-                "timestamp": datetime.utcnow().isoformat(),
-                "model": internal_request.model
-            }
+        # Return agent contract format with metadata
+        output = {
+            "message": response.response,
+            "timestamp": datetime.utcnow().isoformat(),
+            "model": internal_request.model
         }
+        
+        # Add metadata if available
+        if hasattr(response, 'metadata') and response.metadata:
+            output["metadata"] = response.metadata
+            
+        return {"output": output}
 
     # Store container in app state
     app.container = container

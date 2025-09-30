@@ -69,6 +69,31 @@ def render_message(message: Message, client: Union[ConversationClient, AgentCore
             else:
                 st.markdown("<div style='color: #28a745; font-size: 0.9em;'>✓ Feedback submitted</div>", unsafe_allow_html=True)
 
+        # Show citations if available
+        if message.metadata and "citations" in message.metadata:
+            import json
+            try:
+                citations_str = message.metadata["citations"]
+                if isinstance(citations_str, str):
+                    citations = json.loads(citations_str)
+                else:
+                    citations = citations_str
+                
+                if citations:
+                    st.markdown("**📚 Sources:**")
+                    for i, citation in enumerate(citations, 1):
+                        with st.expander(f"Source {i}: {citation.get('source', 'Unknown')}", expanded=False):
+                            col1, col2 = st.columns([3, 1])
+                            with col1:
+                                if citation.get('s3_uri'):
+                                    st.markdown(f"**📁 Document:** `{citation['s3_uri']}`")
+                            with col2:
+                                if citation.get('relevance_score') is not None:
+                                    score = float(citation['relevance_score'])
+                                    st.metric("Relevance", f"{score:.2f}")
+            except (json.JSONDecodeError, TypeError, KeyError):
+                pass
+
         # Show tool calls if available
         if message.metadata and "tools_used" in message.metadata:
             tools_str = message.metadata["tools_used"]

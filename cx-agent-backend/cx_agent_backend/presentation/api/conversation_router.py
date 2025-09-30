@@ -1,9 +1,12 @@
 """FastAPI router for conversation endpoints."""
 
+import logging
 from uuid import UUID
 
 from dependency_injector.wiring import Provide, inject
 from fastapi import APIRouter, Depends, HTTPException, status
+
+logger = logging.getLogger(__name__)
 
 from cx_agent_backend.domain.entities.conversation import Conversation, Message
 from cx_agent_backend.domain.services.conversation_service import ConversationService
@@ -128,7 +131,11 @@ async def send_message(
             model=request.model,
         )
         
-        return SendMessageResponse(response=message.content, tools_used=tools_used)
+        return SendMessageResponse(
+            response=message.content, 
+            tools_used=tools_used,
+            metadata=message.metadata
+        )
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:

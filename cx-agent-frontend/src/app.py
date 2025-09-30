@@ -122,9 +122,6 @@ def main():
                 )
 
             if response:
-                # Debug: Show what we received
-                st.write("Debug - API Response:", response)
-                
                 # Add assistant message
                 metadata = {
                     "model": model,
@@ -134,6 +131,10 @@ def main():
                 # Add tools_used to metadata if available
                 if "tools_used" in response and response["tools_used"]:
                     metadata["tools_used"] = ",".join(response["tools_used"])
+                
+                # Add all metadata from API response
+                if "metadata" in response and response["metadata"]:
+                    metadata.update(response["metadata"])
                 
                 assistant_message = Message(
                     role="assistant",

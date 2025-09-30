@@ -55,29 +55,54 @@ def retrieve_context(query: str) -> dict:
     
     try:
         retriever = _get_kb_retriever()
+        kb_id = parameter_store_reader.get_parameter("/amazon/kb_id")
         logger.debug("Knowledge Base retriever initialized successfully")
         
         retrieved_docs = retriever.invoke(input=query)
         logger.info("Retrieved %s documents from knowledge base", len(retrieved_docs))
 
         document_summaries = []
+        citations = []
+        
         for i, doc in enumerate(retrieved_docs, 1):
+            # Extract S3 URI from metadata
+            s3_uri = doc.metadata.get("location", {}).get("s3Location", {}).get("uri", "")
+            if not s3_uri:
+                s3_uri = doc.metadata.get("source", "")
+            
             summary = {
                 "id": doc.metadata.get("id", f"doc-{i}"),
                 "source": doc.metadata.get("source", "Unknown"),
                 "title": doc.metadata.get("title", f"Document {i}"),
                 "content": doc.page_content,
                 "relevance_score": doc.metadata.get("score", 0),
+                "s3_uri": s3_uri,
+                "knowledge_base_id": kb_id,
             }
             document_summaries.append(summary)
+            
+            # Create citation entry
+            citation = {
+                "source": summary["title"],
+                "s3_uri": s3_uri,
+                "knowledge_base_id": kb_id,
+                "relevance_score": summary["relevance_score"]
+            }
+            citations.append(citation)
+            print(json.dumps(citation))
+            
             logger.debug("Processed document %s: %s...", i, summary["title"][:50])
 
         logger.info("Successfully retrieved and processed %s documents", len(document_summaries))
-        return {"retrieved_documents": document_summaries}
+        return {
+            "retrieved_documents": document_summaries,
+            "citations": citations,
+            "knowledge_base_id": kb_id
+        }
     
     except Exception as e:
         logger.error("Failed to retrieve context: %s", str(e))
-        return {"retrieved_documents": [], "error": f"Knowledge base retrieval failed: {str(e)}"}
+        return {"retrieved_documents": [], "citations": [], "error": f"Knowledge base retrieval failed: {str(e)}"}
 
 
 @tool
