@@ -172,23 +172,39 @@ class LangGraphAgentService(AgentService):
             # Invoke agent
             logger.debug("Invoking agent with %s messages", len(lc_messages))
             response = await agent.ainvoke({"messages": lc_messages}, config=config)
-        logger.debug("Agent response contains %s messages", len(response["messages"]))
         # Extract response
         last_message = response["messages"][-1]
         tools_used = []
+        citations = []
+        knowledge_base_id = None
 
-        # Check all messages for tool usage
-
+        # Check all messages for tool usage and extract citations
+        import json
         message_types = []
         for msg in response["messages"]:
             message_types.append(type(msg).__name__)
+            
             if isinstance(msg, AIMessage) and hasattr(msg, "tool_calls"):
                 if msg.tool_calls:
                     for tool_call in msg.tool_calls:
                         tools_used.append(tool_call["name"])
+            
+            # Extract citations from ToolMessage responses
+            from langchain_core.messages import ToolMessage
+            if isinstance(msg, ToolMessage):
+                try:
+                    # Parse tool response content
+                    if isinstance(msg.content, str):
+                        tool_response = json.loads(msg.content)
+                        if "citations" in tool_response:
+                            citations.extend(tool_response["citations"])
+                        if "knowledge_base_id" in tool_response:
+                            knowledge_base_id = tool_response["knowledge_base_id"]
+                except (json.JSONDecodeError, TypeError, AttributeError):
+                    pass
+        
         # Remove duplicates
         tools_used = list(set(tools_used))
-        logger.info("Agent completed. Tools used: %s", tools_used)
 
         # Check output guardrails if enabled
         if self._guardrail_service:
@@ -209,12 +225,13 @@ class LangGraphAgentService(AgentService):
             "model": request.model,
             "agent_type": request.agent_type.value,
             "trace_id": trace_id,
-            "debug_message_count": len(response["messages"]) if response else 0,
-            "debug_message_types": message_types,
-            "debug_tools_found": len(tools_used) > 0,
         }
-
-        logger.info("Returning response for session %s", request.session_id)
+        
+        # Add citations to metadata if available
+        if citations:
+            metadata["citations"] = citations
+        if knowledge_base_id:
+            metadata["knowledge_base_id"] = knowledge_base_id
         return AgentResponse(
             content=last_message.content,
             agent_type=request.agent_type,

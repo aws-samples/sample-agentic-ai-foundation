@@ -75,14 +75,26 @@ class ConversationService:
             trace_id=None,  # Can be set from FastAPI layer
         )
         agent_response = await self._agent_service.process_request(agent_request)
+        
 
-        # Create AI message
+        # Create AI message with citations
+        ai_metadata = {
+            "agent_type": agent_response.agent_type.value,
+            "tools_used": ",".join(agent_response.tools_used),
+        }
+        
+        # Add citations if available
+        if "citations" in agent_response.metadata:
+            import json
+            ai_metadata["citations"] = json.dumps(agent_response.metadata["citations"]) if isinstance(agent_response.metadata["citations"], list) else agent_response.metadata["citations"]
+        if "knowledge_base_id" in agent_response.metadata:
+            ai_metadata["knowledge_base_id"] = agent_response.metadata["knowledge_base_id"]
+        
+        logger.info("AI metadata: %s", ai_metadata)
+
         ai_message = Message.create_assistant_message(
             content=agent_response.content,
-            metadata={
-                "agent_type": agent_response.agent_type.value,
-                "tools_used": ",".join(agent_response.tools_used),
-            },
+            metadata=ai_metadata,
         )
 
         # Check output guardrails

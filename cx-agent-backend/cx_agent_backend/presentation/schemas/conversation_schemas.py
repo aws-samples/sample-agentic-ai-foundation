@@ -22,7 +22,7 @@ class MessageSchema(BaseModel):
     content: str
     role: MessageRoleSchema
     timestamp: datetime
-    metadata: dict[str, str] = Field(default_factory=dict)
+    metadata: dict = Field(default_factory=dict)
 
 
 class ConversationStatusSchema(str, Enum):
@@ -42,14 +42,14 @@ class ConversationSchema(BaseModel):
     status: ConversationStatusSchema
     created_at: datetime
     updated_at: datetime
-    metadata: dict[str, str] = Field(default_factory=dict)
+    metadata: dict = Field(default_factory=dict)
 
 
 class CreateConversationRequest(BaseModel):
     """Create conversation request."""
 
     user_id: str = Field(..., min_length=1, max_length=100)
-    metadata: dict[str, str] = Field(default_factory=dict)
+    metadata: dict = Field(default_factory=dict)
 
 
 class FeedbackRequest(BaseModel):
@@ -76,6 +76,7 @@ class SendMessageResponse(BaseModel):
     response: str | None = None
     status: str = "success"
     tools_used: list[str] = Field(default_factory=list)
+    metadata: dict = Field(default_factory=dict)
 
 class HealthResponse(BaseModel):
     """Health check response model."""
