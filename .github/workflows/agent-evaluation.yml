@@ -1,0 +1,92 @@
+name: Agent Evaluation
+
+on:
+  push:
+    paths:
+      - 'cx-agent-backend/**'
+  pull_request:
+    paths:
+      - 'cx-agent-backend/**'
+
+jobs:
+  evaluate-agent:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install langfuse pandas requests
+    
+    - name: Start agent
+      run: |
+        cd cx-agent-backend
+        pip install -e .
+        python -m cx_agent_backend &
+        sleep 10
+      env:
+        OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: us-east-1
+    
+    - name: Get credentials from AWS Secrets Manager
+      run: |
+        LANGFUSE_CREDS=$(aws secretsmanager get-secret-value --secret-id langfuse-credentials --query SecretString --output text)
+        echo "LANGFUSE_HOST=$(echo $LANGFUSE_CREDS | jq -r .langfuse_host)" >> $GITHUB_ENV
+        echo "LANGFUSE_PUBLIC_KEY=$(echo $LANGFUSE_CREDS | jq -r .langfuse_public_key)" >> $GITHUB_ENV
+        echo "LANGFUSE_SECRET_KEY=$(echo $LANGFUSE_CREDS | jq -r .langfuse_secret_key)" >> $GITHUB_ENV
+        
+        AGENT_CREDS=$(aws secretsmanager get-secret-value --secret-id agent-config --query SecretString --output text)
+        echo "AGENT_ARN=$(echo $AGENT_CREDS | jq -r .AGENT_ARN)" >> $GITHUB_ENV
+    
+    - name: Run evaluation
+      run: |
+        python simple_evaluation.py
+    
+    - name: Check evaluation results
+      run: |
+        python -c "
+        import pandas as pd
+        import json
+        
+        # Load results
+        eval_df = pd.read_csv('evaluation_results.csv')
+        with open('performance_report.json') as f:
+            report = json.load(f)
+        
+        # Check thresholds
+        avg_f1 = eval_df['f1'].mean()
+        retrieval_rate = report['retrieval_analysis']['percentage_above_threshold']
+        latency_rate = report['total_latency_analysis']['percentage_below_threshold']
+        
+        print(f'Average F1: {avg_f1:.3f}')
+        print(f'Retrieval success: {retrieval_rate:.1f}%')
+        print(f'Latency success: {latency_rate:.1f}%')
+        
+        # Fail if below thresholds
+        assert avg_f1 >= 0.7, f'F1 score {avg_f1:.3f} below threshold 0.7'
+        assert retrieval_rate >= 45, f'Retrieval rate {retrieval_rate:.1f}% below 45%'
+        assert latency_rate >= 80, f'Latency rate {latency_rate:.1f}% below 80%'
+        "
+    
+    - name: Upload evaluation artifacts
+      uses: actions/upload-artifact@v3
+      if: always()
+      with:
+        name: evaluation-results
+        path: |
+          test_results.csv
+          trace_metrics.csv
+          evaluation_results.csv
+          performance_report.json
