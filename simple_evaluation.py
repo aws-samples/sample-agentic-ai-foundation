@@ -238,7 +238,64 @@ def evaluate_against_groundtruth(metrics_df, groundtruth):
                 'found_trace': True
             })
     
-    return pd.DataFrame(evaluation_results)
+
+
+def main():
+    """Main evaluation function"""
+    # Initialize Langfuse
+    langfuse = Langfuse(
+        host=os.getenv("LANGFUSE_HOST"),
+        public_key=os.getenv("LANGFUSE_PUBLIC_KEY"),
+        secret_key=os.getenv("LANGFUSE_SECRET_KEY")
+    )
+    
+    print("Starting simple evaluation...")
+    
+    # Run test queries
+    test_results = run_test_queries()
+    test_df = pd.DataFrame(test_results)
+    test_df.to_csv('test_results.csv', index=False)
+    print(f"Completed {len(test_results)} test queries")
+    
+    # Wait for traces to be processed
+    print("Waiting for traces to be processed...")
+    time.sleep(30)
+    
+    # Get recent traces
+    trace_ids = get_recent_traces(langfuse, minutes=15)
+    
+    if not trace_ids:
+        print("No recent traces found")
+        return
+    
+    # Extract metrics
+    metrics_df = extract_detailed_metrics(langfuse, trace_ids)
+    metrics_df.to_csv('trace_metrics.csv', index=False)
+    print(f"Extracted metrics from {len(metrics_df)} traces")
+    
+    # Evaluate against groundtruth
+    groundtruth = create_groundtruth()
+    evaluation_df = evaluate_against_groundtruth(metrics_df, groundtruth)
+    evaluation_df.to_csv('evaluation_results.csv', index=False)
+    
+    # Generate summary report
+    report = {
+        'timestamp': datetime.now().isoformat(),
+        'total_queries': len(test_results),
+        'successful_queries': sum(1 for r in test_results if r['success']),
+        'traces_found': len(trace_ids),
+        'avg_f1_score': evaluation_df['f1'].mean(),
+        'queries_with_traces': evaluation_df['found_trace'].sum()
+    }
+    
+    import json
+    with open('performance_report.json', 'w') as f:
+        json.dump(report, f, indent=2)
+    
+    print(f"Evaluation complete. Average F1 score: {report['avg_f1_score']:.3f}")
+
+if __name__ == "__main__":
+    main()rn pd.DataFrame(evaluation_results)
 
 def generate_performance_report(metrics_df, retrieval_threshold=0.5, latency_threshold=2000, total_latency_threshold=5000):
     """Generate performance report for retrieval and latency metrics"""
