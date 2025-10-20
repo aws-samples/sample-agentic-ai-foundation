@@ -4,9 +4,8 @@ from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 import os
 import logging
+import base64
 from langgraph.prebuilt import create_react_agent
-from langfuse import get_client, Langfuse
-from langfuse.langchain import CallbackHandler
 
 logger = logging.getLogger(__name__)
 
@@ -74,6 +73,72 @@ class LangGraphAgentService(AgentService):
 
         return create_react_agent(llm, tools=tools, prompt=system_message)
 
+    async def _setup_langfuse_otlp(self):
+        """Setup Langfuse OTLP configuration."""
+        logger.info("[LANGFUSE] Starting OTLP setup")
+        
+        # Disable ADOT to avoid conflicts
+        os.environ["DISABLE_ADOT_OBSERVABILITY"] = "True"
+        logger.info("[LANGFUSE] Disabled ADOT observability")
+        
+        # Clear conflicting environment variables
+        for k in [
+            "OTEL_EXPORTER_OTLP_LOGS_HEADERS",
+            "AGENT_OBSERVABILITY_ENABLED", 
+            "OTEL_PYTHON_DISTRO",
+            "OTEL_RESOURCE_ATTRIBUTES",
+            "OTEL_PYTHON_CONFIGURATOR",
+            "OTEL_PYTHON_EXCLUDED_URLS",
+        ]:
+            os.environ.pop(k, None)
+        
+        # Configure Langfuse OTLP
+        public_key = self._langfuse_config.get("public_key")
+        secret_key = self._langfuse_config.get("secret_key")
+        host = self._langfuse_config.get("host")
+        
+        logger.info(f"[LANGFUSE] Config - host: {host}, public_key: {public_key[:10] if public_key else None}..., secret_key: {'***' if secret_key else None}")
+        
+        if not all([public_key, secret_key, host]):
+            logger.error(f"[LANGFUSE] Missing config - host: {host}, public_key: {bool(public_key)}, secret_key: {bool(secret_key)}")
+            return
+        
+        auth_token = base64.b64encode(f"{public_key}:{secret_key}".encode()).decode()
+        otlp_endpoint = host + "/api/public/otel"
+        
+        # Set Langfuse environment variables (like Strands example)
+        os.environ["LANGFUSE_PUBLIC_KEY"] = public_key
+        os.environ["LANGFUSE_SECRET_KEY"] = secret_key
+        os.environ["LANGFUSE_HOST"] = host
+        
+        os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = otlp_endpoint
+        os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {auth_token}"
+        
+        # Disable LangChain tracing to avoid LangSmith warnings
+        os.environ["LANGCHAIN_TRACING_V2"] = "true"
+        
+        # Setup OpenTelemetry exporter (equivalent to StrandsTelemetry)
+        try:
+            from opentelemetry import trace
+            from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
+            from opentelemetry.sdk.trace import TracerProvider
+            from opentelemetry.sdk.trace.export import BatchSpanProcessor
+            
+            trace.set_tracer_provider(TracerProvider())
+            otlp_exporter = OTLPSpanExporter(
+                endpoint=otlp_endpoint + "/v1/traces",
+                headers={"Authorization": f"Basic {auth_token}"}
+            )
+            span_processor = BatchSpanProcessor(otlp_exporter)
+            trace.get_tracer_provider().add_span_processor(span_processor)
+            
+            logger.info("[LANGFUSE] OpenTelemetry exporter configured")
+        except ImportError:
+            logger.warning("[LANGFUSE] OpenTelemetry dependencies not found, install: opentelemetry-api opentelemetry-sdk opentelemetry-exporter-otlp")
+        
+        logger.info(f"[LANGFUSE] OTLP configured - endpoint: {otlp_endpoint}")
+        logger.info(f"[LANGFUSE] LangChain tracing enabled")
+
     async def process_request(self, request: AgentRequest) -> AgentResponse:
         """Process request through appropriate agent."""
         logger.info(
@@ -83,13 +148,14 @@ class LangGraphAgentService(AgentService):
             request.agent_type,
         )
         
-        # Use trace_id from request if provided, otherwise create one
-        langfuse = None
-        predefined_trace_id = getattr(request, 'trace_id', None)
-        if self._langfuse_config.get("enabled"):
-            langfuse = get_client()
-            if not predefined_trace_id:
-                predefined_trace_id = Langfuse.create_trace_id(seed=request.session_id)
+        # Setup OTLP instead of callback
+        langfuse_enabled = self._langfuse_config.get("enabled")
+        logger.info(f"[LANGFUSE] Langfuse enabled: {langfuse_enabled}")
+        
+        if langfuse_enabled:
+            await self._setup_langfuse_otlp()
+        else:
+            logger.info("[LANGFUSE] Langfuse disabled, skipping OTLP setup")
         
         # Check input guardrails if enabled
         if self._guardrail_service and request.messages:
@@ -125,53 +191,31 @@ class LangGraphAgentService(AgentService):
             elif msg.role == MessageRole.ASSISTANT:
                 lc_messages.append(AIMessage(content=msg.content))
 
-        # Create config with Langfuse callback if enabled
-        callbacks = []
-        trace_id = None
-        response = None
-
-        if self._langfuse_config.get("enabled"):
-            os.environ["LANGFUSE_SECRET_KEY"] = self._langfuse_config.get("secret_key")
-            os.environ["LANGFUSE_PUBLIC_KEY"] = self._langfuse_config.get("public_key")
-            os.environ["LANGFUSE_HOST"] = self._langfuse_config.get("host")
-            
-            trace_id = predefined_trace_id
-            
-            langfuse_handler = CallbackHandler()
-            
-            with langfuse.start_as_current_span(
-                name="langchain-request",
-                trace_context={"trace_id": predefined_trace_id}
-            ) as span:
-                span.update_trace(
-                    user_id=request.user_id,
-                    input={"messages": [msg.content for msg in request.messages]}
-                )
-                
-                config = RunnableConfig(
-                    configurable={
-                        "thread_id": f"{request.session_id}",
-                        "user_id": request.user_id,
-                    },
-                    callbacks=[langfuse_handler],
-                )
-                
-                # Invoke agent
-                logger.debug("Invoking agent with %s messages", len(lc_messages))
-                response = await agent.ainvoke({"messages": lc_messages}, config=config)
-                
-                span.update_trace(output={"response": response["messages"][-1].content if response["messages"] else ""})
-        else:
-            config = RunnableConfig(
-                configurable={
-                    "thread_id": f"{request.session_id}",
-                    "user_id": request.user_id,
-                },
-            )
-            
-            # Invoke agent
-            logger.debug("Invoking agent with %s messages", len(lc_messages))
-            response = await agent.ainvoke({"messages": lc_messages}, config=config)
+        # Simplified config without callbacks - tracing happens automatically via OTLP
+        config = RunnableConfig(
+            configurable={
+                "thread_id": f"{request.session_id}",
+                "user_id": request.user_id,
+            },
+        )
+        
+        # Invoke agent
+        logger.info(f"[LANGFUSE] Invoking agent with {len(lc_messages)} messages, session: {request.session_id}")
+        logger.info(f"[LANGFUSE] OTEL env vars - endpoint: {os.environ.get('OTEL_EXPORTER_OTLP_ENDPOINT')}, tracing: {os.environ.get('LANGCHAIN_TRACING_V2')}")
+        
+        response = await agent.ainvoke({"messages": lc_messages}, config=config)
+        
+        logger.info(f"[LANGFUSE] Agent response received, messages count: {len(response.get('messages', []))}")
+        
+        # Flush Langfuse traces
+        if langfuse_enabled:
+            try:
+                from langfuse import Langfuse
+                langfuse_client = Langfuse()
+                langfuse_client.flush()
+                logger.info("[LANGFUSE] Traces flushed")
+            except Exception as e:
+                logger.warning(f"[LANGFUSE] Failed to flush traces: {e}")
         # Extract response
         last_message = response["messages"][-1]
         tools_used = []
@@ -220,11 +264,10 @@ class LangGraphAgentService(AgentService):
                     },
                 )
 
-        # Add trace metadata
+        # Add metadata
         metadata = {
             "model": request.model,
             "agent_type": request.agent_type.value,
-            "trace_id": trace_id,
         }
         
         # Add citations to metadata if available
