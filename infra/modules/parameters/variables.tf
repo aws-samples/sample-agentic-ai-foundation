@@ -3,6 +3,11 @@ variable "knowledge_base_id" {
   type        = string
 }
 
+variable "ac_stm_memory_id" {
+  description = "Agent core STM memory"
+  type        = string
+}
+
 variable "guardrail_id" {
   description = "Bedrock Guardrail ID"
   type        = string
