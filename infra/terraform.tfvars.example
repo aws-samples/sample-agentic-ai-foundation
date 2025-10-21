@@ -13,7 +13,7 @@ langfuse_host = "https://cloud.langfuse.com"
 langfuse_public_key = "your-langfuse-public-key"
 langfuse_secret_key = "your-langfuse-secret-key"
 
-# Gateway Variables
+# LLM Gateway Variables
 gateway_url = "https://your-gateway-url.example.com"
 gateway_api_key = "your-gateway-api-key"
 
@@ -24,3 +24,6 @@ gateway_api_key = "your-gateway-api-key"
 # zendesk_domain = "your-subdomain"
 # zendesk_email = "your-email@example.com"
 # zendesk_api_token = "your-zendesk-api-token"
+
+# Memory Variables
+# stm_memory_id = "your-stm-memory-id"

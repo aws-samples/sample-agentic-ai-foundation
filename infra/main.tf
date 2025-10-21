@@ -10,7 +10,6 @@ module "bedrock_role" {
 module "kb_stack" {
   source      = "./modules/kb-stack"
   name        = var.kb_stack_name
-  bucket_name = var.kb_bucket_name
   kb_model_arn = var.kb_model_arn
 }
 
@@ -36,6 +35,7 @@ module "parameters" {
   guardrail_id      = module.guardrail.guardrail_id
   user_pool_id      = module.cognito.user_pool_id
   client_id         = module.cognito.user_pool_client_id
+  ac_stm_memory_id  = var.ac_stm_memory_id
 
   depends_on = [
     module.kb_stack,
