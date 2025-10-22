@@ -15,7 +15,9 @@ def render_message(message: Message, client: Union[ConversationClient, AgentCore
 
         # Add feedback buttons for assistant messages
         if message.role == "assistant" and client:
-            message_id = str(message.metadata.get("message_id", hash(message.content)))
+            # Use message timestamp + content hash for unique ID
+            unique_id = f"{message.timestamp.isoformat()}_{hash(message.content)}"
+            message_id = str(message.metadata.get("message_id", unique_id))
             
             # Check if feedback already given
             feedback_key = f"feedback_given_{message_id}"

@@ -92,7 +92,7 @@ async def get_conversation(
     return _conversation_to_schema(conversation)
 
 
-@router.post("/invocations", response_model=SendMessageResponse)
+@router.post("/send-message", response_model=SendMessageResponse)
 @inject
 async def send_message(
     request: SendMessageRequest,
@@ -100,13 +100,14 @@ async def send_message(
         Provide[Container.conversation_service]
     ),
 ) -> SendMessageResponse:
-    """Process agent invocation with optional feedback."""
+    """Send a message to the agent."""
     try:
         # Process feedback if provided
         if request.feedback:
             feedback_score = 1 if request.feedback.score > 0.5 else 0
+            user_id = request.user_id or "default_user"
             await conversation_service.log_feedback(
-                "default_user", 
+                user_id, 
                 request.feedback.session_id, 
                 request.feedback.run_id, 
                 feedback_score, 
@@ -121,12 +122,14 @@ async def send_message(
         
         # Use existing conversation or create new one
         conversation_id = request.conversation_id
+        user_id = request.user_id or "default_user"
         if not conversation_id:
-            conversation = await conversation_service.start_conversation("default_user")
+            conversation = await conversation_service.start_conversation(user_id)
             conversation_id = conversation.id
             
         message, tools_used = await conversation_service.send_message(
             conversation_id=conversation_id,
+            user_id=user_id,
             content=request.prompt,
             model=request.model,
         )

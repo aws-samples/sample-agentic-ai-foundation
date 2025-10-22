@@ -18,7 +18,7 @@ class AgentCoreClient:
         """Create a new conversation session."""
         return str(uuid.uuid4())
     
-    def send_message(self, conversation_id: str, message: str, model: str = None) -> dict:
+    def send_message(self, conversation_id: str, message: str, model: str = None, user_id: str = None) -> dict:
         """Send message to AgentCore and get response."""
         try:
             escaped_agent_arn = urllib.parse.quote(self.agent_runtime_arn, safe='')
@@ -36,6 +36,9 @@ class AgentCoreClient:
                     "conversation_id": conversation_id
                 }
             }
+            
+            if user_id:
+                payload["input"]["user_id"] = user_id
             
             response = requests.post(url, headers=headers, data=json.dumps(payload), timeout=61)
             

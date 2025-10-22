@@ -20,8 +20,7 @@ logging.basicConfig(
 from cx_agent_backend.infrastructure.config.container import Container
 from cx_agent_backend.infrastructure.config.settings import settings
 from cx_agent_backend.presentation.api.conversation_router import (
-    router as conversation_router,
-    send_message
+    router as conversation_router
 )
 from cx_agent_backend.presentation.schemas.conversation_schemas import SendMessageRequest
 
@@ -62,41 +61,68 @@ def create_app() -> FastAPI:
     @app.post("/invocations")
     async def invocations(request: dict, http_request: Request):
         """AgentCore-compatible endpoint to invoke the agent (send message & get response)"""
+        from cx_agent_backend.domain.services.conversation_service import ConversationService
+        
+        # Get conversation service from container
+        conversation_service = container.conversation_service()
         
         # Extract session information
-        session_id = http_request.headers.get("x-amzn-bedrock-agentcore-runtime-session-id", "N/A")
+        # session_id = http_request.headers.get("x-amzn-bedrock-agentcore-runtime-session-id")
         
         # Extract data from input object
         input_data = request.get("input", {})
         prompt = input_data.get("prompt")
         feedback = input_data.get("feedback")
+        conversation_id_str = input_data.get("conversation_id")
+        user_id = input_data.get("user_id")
+        
+        # Convert conversation_id to UUID
+        from uuid import UUID
+        conversation_id = UUID(conversation_id_str) if conversation_id_str else None
         
         if not prompt and not feedback:
             raise HTTPException(status_code=400, detail="Either prompt or feedback must be provided in input.")
         
-        # Convert to internal format
-        internal_request = SendMessageRequest(
-            prompt=prompt,
-            conversation_id=None,
-            model=settings.default_model,
-            feedback=feedback
-        )
-        
-        # Call internal endpoint
-        response = await send_message(internal_request)
-        
-        # Return agent contract format with metadata
-        output = {
-            "message": response.response,
-            "timestamp": datetime.utcnow().isoformat(),
-            "model": internal_request.model
-        }
-        
-        # Add metadata if available
-        if hasattr(response, 'metadata') and response.metadata:
-            output["metadata"] = response.metadata
+        try:
+            # Process feedback if provided
+            if feedback:
+                feedback_score = 1 if feedback.get("score", 0) > 0.5 else 0
+                await conversation_service.log_feedback(
+                    user_id, 
+                    feedback.get("session_id"), 
+                    feedback.get("run_id"), 
+                    feedback_score, 
+                    feedback.get("comment")
+                )
             
-        return {"output": output}
+            # If no prompt, this is feedback-only request
+            if not prompt:
+                return {"output": {"message": "Feedback received", "timestamp": datetime.utcnow().isoformat()}}
+            
+            message, tools_used = await conversation_service.send_message(
+                conversation_id=conversation_id,
+                user_id=user_id,
+                content=prompt,
+                model=settings.default_model,
+            )
+            
+            # Return agent contract format with metadata
+            output = {
+                "message": message.content,
+                "timestamp": datetime.utcnow().isoformat(),
+                "model": settings.default_model
+            }
+            
+            # Add metadata if available
+            if hasattr(message, 'metadata') and message.metadata:
+                output["metadata"] = message.metadata
+                
+            return {"output": output}
+            
+        except ValueError as e:
+            raise HTTPException(status_code=404, detail=str(e))
+        except Exception as e:
+            raise HTTPException(status_code=500, detail=f"Failed to process request: {str(e)}")
 
     # Store container in app state
     app.container = container
