@@ -38,10 +38,11 @@ class ConversationService:
         self, conversation_id: UUID, user_id: str, content: str, model: str
     ) -> tuple[Message, list[str]]:
         """Send a message and get AI response."""
-        # Get conversation
+        # Get or create conversation
         conversation = await self._conversation_repo.get_by_id(conversation_id)
         if not conversation:
-            raise ValueError(f"Conversation {conversation_id} not found")
+            conversation = Conversation.create(user_id, conversation_id=conversation_id)
+            await self._conversation_repo.save(conversation)
 
         # Add user message
         user_message = Message.create_user_message(content)

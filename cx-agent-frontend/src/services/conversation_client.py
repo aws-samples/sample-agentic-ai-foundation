@@ -13,18 +13,6 @@ class ConversationClient:
         self.base_url = base_url
         self.session = requests.Session()
 
-    def create_conversation(self, user_id: str) -> Optional[str]:
-        """Create a new conversation."""
-        try:
-            response = self.session.post(
-                f"{self.base_url}/api/v1/", json={"user_id": user_id}
-            )
-            response.raise_for_status()
-            return response.json()["id"]
-        except Exception as e:
-            st.error(f"Failed to create conversation: {e}")
-            return None
-
     def send_message(
         self, conversation_id: str, content: str, model: str, user_id: str = None, feedback: Optional[Dict] = None
     ) -> Optional[Dict]:
@@ -37,11 +25,19 @@ class ConversationClient:
                 payload["feedback"] = feedback
             
             response = self.session.post(
-                f"{self.base_url}/api/v1/invocations",
-                json=payload,
+                f"{self.base_url}/invocations",
+                json={"input": payload},
             )
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            # Extract from output wrapper
+            if "output" in result:
+                return {
+                    "response": result["output"].get("message", ""),
+                    "metadata": result["output"].get("metadata", {}),
+                    "tools_used": result["output"].get("tools_used", [])
+                }
+            return result
         except Exception as e:
             st.error(f"Failed to send message: {e}")
             return None

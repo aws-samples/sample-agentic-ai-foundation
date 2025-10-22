@@ -92,7 +92,7 @@ async def get_conversation(
     return _conversation_to_schema(conversation)
 
 
-@router.post("/invocations", response_model=SendMessageResponse)
+@router.post("/send-message", response_model=SendMessageResponse)
 @inject
 async def send_message(
     request: SendMessageRequest,
@@ -100,7 +100,7 @@ async def send_message(
         Provide[Container.conversation_service]
     ),
 ) -> SendMessageResponse:
-    """Process agent invocation with optional feedback."""
+    """Send a message to the agent."""
     try:
         # Process feedback if provided
         if request.feedback:

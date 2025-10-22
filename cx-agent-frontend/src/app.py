@@ -97,13 +97,9 @@ def main():
 
     # Chat input
     if prompt := st.chat_input("Type your message..."):
-        # Create conversation if needed
+        # Generate new conversation ID if needed
         if not st.session_state.conversation_id:
-            with st.spinner("Creating conversation..."):
-                conversation_id = client.create_conversation(st.session_state.user_id)
-                if not conversation_id:
-                    st.stop()
-                st.session_state.conversation_id = conversation_id
+            st.session_state.conversation_id = str(uuid.uuid4())
 
         # Add user message
         user_message = Message(role="user", content=prompt, timestamp=datetime.now())
@@ -138,7 +134,7 @@ def main():
                 
                 assistant_message = Message(
                     role="assistant",
-                    content=response["response"],
+                    content=response.get("response", response.get("message", "")),
                     timestamp=datetime.now(),
                     metadata=metadata,
                 )
