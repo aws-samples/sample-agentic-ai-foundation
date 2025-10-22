@@ -35,7 +35,7 @@ class ConversationService:
         return conversation
 
     async def send_message(
-        self, conversation_id: UUID, content: str, model: str
+        self, conversation_id: UUID, user_id: str, content: str, model: str
     ) -> tuple[Message, list[str]]:
         """Send a message and get AI response."""
         # Get conversation
@@ -69,7 +69,7 @@ class ConversationService:
         agent_request = AgentRequest(
             messages=conversation.messages,
             agent_type=AgentType.CUSTOMER_SERVICE,
-            user_id=conversation.user_id,
+            user_id=user_id,
             model=model,
             session_id=str(conversation.id),
             trace_id=None,  # Can be set from FastAPI layer

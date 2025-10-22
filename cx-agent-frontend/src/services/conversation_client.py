@@ -26,11 +26,13 @@ class ConversationClient:
             return None
 
     def send_message(
-        self, conversation_id: str, content: str, model: str, feedback: Optional[Dict] = None
+        self, conversation_id: str, content: str, model: str, user_id: str = None, feedback: Optional[Dict] = None
     ) -> Optional[Dict]:
         """Send a message to the conversation with optional feedback."""
         try:
             payload = {"prompt": content, "conversation_id": conversation_id, "model": model}
+            if user_id:
+                payload["user_id"] = user_id
             if feedback:
                 payload["feedback"] = feedback
             

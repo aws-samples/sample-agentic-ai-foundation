@@ -114,11 +114,11 @@ def main():
         with st.spinner("Thinking..."):
             if isinstance(client, AgentCoreClient):
                 response = client.send_message(
-                    st.session_state.conversation_id, prompt, model
+                    st.session_state.conversation_id, prompt, model, st.session_state.user_id
                 )
             else:
                 response = client.send_message(
-                    st.session_state.conversation_id, prompt, model
+                    st.session_state.conversation_id, prompt, model, st.session_state.user_id
                 )
 
             if response:

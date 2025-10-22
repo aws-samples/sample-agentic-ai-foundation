@@ -67,6 +67,7 @@ class SendMessageRequest(BaseModel):
     prompt: str | None = Field(None, min_length=1, max_length=10000)
     conversation_id: UUID | None = None
     model: str = Field(default="gpt-4o-mini", min_length=1)
+    user_id: str | None = Field(None, min_length=1, max_length=100)
     feedback: FeedbackRequest | None = None
 
 

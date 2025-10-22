@@ -70,6 +70,7 @@ def create_app() -> FastAPI:
         input_data = request.get("input", {})
         prompt = input_data.get("prompt")
         feedback = input_data.get("feedback")
+        user_id = input_data.get("user_id")
         
         if not prompt and not feedback:
             raise HTTPException(status_code=400, detail="Either prompt or feedback must be provided in input.")
@@ -79,6 +80,7 @@ def create_app() -> FastAPI:
             prompt=prompt,
             conversation_id=None,
             model=settings.default_model,
+            user_id=user_id,
             feedback=feedback
         )
         
