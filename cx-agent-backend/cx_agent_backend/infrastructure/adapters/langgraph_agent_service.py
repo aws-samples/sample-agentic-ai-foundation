@@ -6,8 +6,7 @@ from langchain_core.tools import tool
 import os
 import logging
 from langgraph.prebuilt import create_react_agent
-from langfuse import get_client, Langfuse
-from langfuse.langchain import CallbackHandler
+from langfuse import Langfuse
 from bedrock_agentcore.memory import MemoryClient
 
 logger = logging.getLogger(__name__)
@@ -109,12 +108,9 @@ class LangGraphAgentService(AgentService):
         )
         
         # Use trace_id from request if provided, otherwise create one
-        langfuse = None
         predefined_trace_id = getattr(request, 'trace_id', None)
-        if self._langfuse_config.get("enabled"):
-            langfuse = get_client()
-            if not predefined_trace_id:
-                predefined_trace_id = Langfuse.create_trace_id(seed=request.session_id)
+        if self._langfuse_config.get("enabled") and not predefined_trace_id:
+            predefined_trace_id = Langfuse.create_trace_id(seed=request.session_id)
         
         # Check input guardrails if enabled
         if self._guardrail_service and request.messages:
@@ -164,79 +160,48 @@ class LangGraphAgentService(AgentService):
         response = None
 
         if self._langfuse_config.get("enabled"):
-            os.environ["LANGFUSE_SECRET_KEY"] = self._langfuse_config.get("secret_key")
-            os.environ["LANGFUSE_PUBLIC_KEY"] = self._langfuse_config.get("public_key")
-            os.environ["LANGFUSE_HOST"] = self._langfuse_config.get("host")
+            import base64
+            
+            # Set OTEL environment variables for Langfuse integration
+            langfuse_public_key = self._langfuse_config.get("public_key")
+            langfuse_secret_key = self._langfuse_config.get("secret_key")
+            langfuse_auth_token = base64.b64encode(f"{langfuse_public_key}:{langfuse_secret_key}".encode()).decode()
+            
+            os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "https://cloud.langfuse.com/api/public/otel"
+            os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = f"Authorization=Basic {langfuse_auth_token}"
+            os.environ["LANGSMITH_OTEL_ENABLED"] = "true"
+            os.environ["LANGSMITH_TRACING"] = "true"
+            os.environ["DISABLE_ADOT_OBSERVABILITY"] = "true"
             
             trace_id = predefined_trace_id
-            
-            langfuse_handler = CallbackHandler()
-            
-            with langfuse.start_as_current_span(
-                name="langchain-request",
-                trace_context={"trace_id": predefined_trace_id}
-            ) as span:
-                span.update_trace(
-                    user_id=request.user_id,
-                    input={"messages": [msg.content for msg in request.messages]}
-                )
+        
+        config = RunnableConfig(
+            configurable={
+                "thread_id": f"{request.session_id}",
+                "user_id": request.user_id,
+            },
+        )
+        
+        # Invoke agent
+        logger.debug("Invoking agent with %s messages", len(lc_messages))
+        response = await agent.ainvoke({"messages": lc_messages}, config=config)
+        
+        # Save conversation to memory if available
+        if memory_client and lc_messages:
+            try:
+                last_user_msg = next((msg.content for msg in reversed(lc_messages) if isinstance(msg, HumanMessage)), None)
+                assistant_response = response["messages"][-1].content if response["messages"] else ""
                 
-                config = RunnableConfig(
-                    configurable={
-                        "thread_id": f"{request.session_id}",
-                        "user_id": request.user_id,
-                    },
-                    callbacks=[langfuse_handler],
-                )
-                
-                # Invoke agent
-                logger.debug("Invoking agent with %s messages", len(lc_messages))
-                response = await agent.ainvoke({"messages": lc_messages}, config=config)
-                
-                # Save conversation to memory if available
-                if memory_client and lc_messages:
-                    try:
-                        last_user_msg = next((msg.content for msg in reversed(lc_messages) if isinstance(msg, HumanMessage)), None)
-                        assistant_response = response["messages"][-1].content if response["messages"] else ""
-                        
-                        if last_user_msg and assistant_response:
-                            memory_client.create_event(
-                                memory_id=stm_memory_id,
-                                actor_id=actor_id,
-                                session_id=session_id,
-                                messages=[(last_user_msg, "USER"), (assistant_response, "ASSISTANT")]
-                            )
-                    except Exception as e:
-                        logger.warning(f"Failed to save conversation to memory: {e}")
-                
-                span.update_trace(output={"response": response["messages"][-1].content if response["messages"] else ""})
-        else:
-            config = RunnableConfig(
-                configurable={
-                    "thread_id": f"{request.session_id}",
-                    "user_id": request.user_id,
-                },
-            )
-            
-            # Invoke agent
-            logger.debug("Invoking agent with %s messages", len(lc_messages))
-            response = await agent.ainvoke({"messages": lc_messages}, config=config)
-            
-            # Save conversation to memory if available
-            if memory_client and lc_messages:
-                try:
-                    last_user_msg = next((msg.content for msg in reversed(lc_messages) if isinstance(msg, HumanMessage)), None)
-                    assistant_response = response["messages"][-1].content if response["messages"] else ""
-                    
-                    if last_user_msg and assistant_response:
-                        memory_client.create_event(
-                            memory_id=stm_memory_id,
-                            actor_id=actor_id,
-                            session_id=session_id,
-                            messages=[(last_user_msg, "USER"), (assistant_response, "ASSISTANT")]
-                        )
-                except Exception as e:
-                    logger.warning(f"Failed to save conversation to memory: {e}")
+                if last_user_msg and assistant_response:
+                    memory_client.create_event(
+                        memory_id=stm_memory_id,
+                        actor_id=actor_id,
+                        session_id=session_id,
+                        messages=[(last_user_msg, "USER"), (assistant_response, "ASSISTANT")]
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to save conversation to memory: {e}")
+
         # Extract response
         last_message = response["messages"][-1]
         tools_used = []
