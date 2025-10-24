@@ -8,8 +8,14 @@ resource "aws_iam_role_policy" "bedrock_kb_sample_kb_model" {
     Statement = [
       {
         Action   = [
-          "aoss:APIAccessAll",
-          "aoss:DashboardsAccessAll"
+          "aoss:CreateIndex",
+          "aoss:DescribeIndex",
+          "aoss:UpdateIndex",
+          "aoss:DeleteIndex",
+          "aoss:WriteDocument",
+          "aoss:ReadDocument",
+          "aoss:SearchDocument",
+          "aoss:DeleteDocument"
         ]
         Effect   = "Allow"
         Resource = [var.opensearch_arn]
