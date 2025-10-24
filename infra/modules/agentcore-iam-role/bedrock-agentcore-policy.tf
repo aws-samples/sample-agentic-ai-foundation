@@ -111,6 +111,9 @@ resource "aws_iam_policy" "monitoring_permissions" {
         ]
       },
       {
+        # WILDCARD JUSTIFICATION: CloudWatch PutMetricData requires Resource="*" 
+        # as per AWS documentation. Condition restricts to bedrock-agentcore namespace only.
+        # Reference: https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
         Effect   = "Allow"
         Resource = "*"
         Action   = "cloudwatch:PutMetricData"
