@@ -11,7 +11,11 @@ resource "aws_iam_policy" "bedrock_permissions" {
           "bedrock:InvokeModel",
           "bedrock:InvokeModelWithResponseStream"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.*",
+          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/amazon.*",
+          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/meta.*"
+        ]
       }
     ]
   })
@@ -100,7 +104,9 @@ resource "aws_iam_policy" "monitoring_permissions" {
           "xray:GetSamplingRules",
           "xray:GetSamplingTargets"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:xray:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trace/*"
+        ]
       },
       {
         Effect   = "Allow"

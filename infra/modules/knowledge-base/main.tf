@@ -7,7 +7,10 @@ resource "aws_iam_role_policy" "bedrock_kb_sample_kb_model" {
     Version = "2012-10-17"
     Statement = [
       {
-        Action   = ["aoss:*"]
+        Action   = [
+          "aoss:APIAccessAll",
+          "aoss:DashboardsAccessAll"
+        ]
         Effect   = "Allow"
         Resource = [var.opensearch_arn]
       },
