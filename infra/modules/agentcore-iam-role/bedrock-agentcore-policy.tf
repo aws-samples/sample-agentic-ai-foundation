@@ -45,7 +45,9 @@ resource "aws_iam_policy" "ecr_permissions" {
         Action = [
           "ecr:GetAuthorizationToken"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
+        ]
       }
     ]
   })
