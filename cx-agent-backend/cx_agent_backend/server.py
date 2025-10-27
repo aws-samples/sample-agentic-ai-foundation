@@ -60,35 +60,6 @@ def create_app() -> FastAPI:
     
     @app.post("/invocations")
     async def invocations(request: dict, http_request: Request):
-    
-    @app.post("/invocations/stream")
-    async def invocations_stream(request: dict, http_request: Request):
-        """AgentCore-compatible streaming endpoint"""
-        from fastapi.responses import StreamingResponse
-        from cx_agent_backend.domain.services.conversation_service import ConversationService
-        
-        conversation_service = container.conversation_service()
-        input_data = request.get("input", {})
-        prompt = input_data.get("prompt")
-        conversation_id_str = input_data.get("conversation_id")
-        user_id = input_data.get("user_id")
-        
-        from uuid import UUID
-        conversation_id = UUID(conversation_id_str) if conversation_id_str else None
-        
-        if not prompt:
-            raise HTTPException(status_code=400, detail="Prompt required for streaming")
-        
-        async def generate():
-            async for chunk in conversation_service.stream_message(
-                conversation_id=conversation_id,
-                user_id=user_id,
-                content=prompt,
-                model=settings.default_model,
-            ):
-                yield f"data: {chunk}\n\n"
-        
-        return StreamingResponse(generate(), media_type="text/plain")
         """AgentCore-compatible endpoint to invoke the agent (send message & get response)"""
         from cx_agent_backend.domain.services.conversation_service import ConversationService
         
