@@ -75,6 +75,7 @@ def create_app() -> FastAPI:
         feedback = input_data.get("feedback")
         conversation_id_str = input_data.get("conversation_id")
         user_id = input_data.get("user_id")
+        langfuse_tags = input_data.get("langfuse_tags", [])
         
         # Convert conversation_id to UUID
         from uuid import UUID
@@ -104,6 +105,7 @@ def create_app() -> FastAPI:
                 user_id=user_id,
                 content=prompt,
                 model=settings.default_model,
+                langfuse_tags=langfuse_tags,
             )
             
             # Return agent contract format with metadata
@@ -116,7 +118,16 @@ def create_app() -> FastAPI:
             # Add metadata if available
             if hasattr(message, 'metadata') and message.metadata:
                 output["metadata"] = message.metadata
-                
+                # Extract trace_id from metadata if available
+                if "trace_id" in message.metadata:
+                    output["trace_id"] = message.metadata["trace_id"]
+                    print(f"DEBUG: Added trace_id to output: {message.metadata['trace_id']}")
+                else:
+                    print(f"DEBUG: No trace_id in metadata. Available keys: {list(message.metadata.keys())}")
+            else:
+                print("DEBUG: No metadata available in message")
+            
+            print(f"DEBUG: Final output keys: {list(output.keys())}")
             return {"output": output}
             
         except ValueError as e:

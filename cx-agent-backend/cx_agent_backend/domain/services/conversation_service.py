@@ -35,7 +35,7 @@ class ConversationService:
         return conversation
 
     async def send_message(
-        self, conversation_id: UUID, user_id: str, content: str, model: str
+        self, conversation_id: UUID, user_id: str, content: str, model: str, langfuse_tags: list[str] = None
     ) -> tuple[Message, list[str]]:
         """Send a message and get AI response."""
         # Get or create conversation
@@ -74,6 +74,7 @@ class ConversationService:
             model=model,
             session_id=str(conversation.id),
             trace_id=None,  # Can be set from FastAPI layer
+            langfuse_tags=langfuse_tags or [],
         )
         agent_response = await self._agent_service.process_request(agent_request)
         
@@ -90,6 +91,8 @@ class ConversationService:
             ai_metadata["citations"] = json.dumps(agent_response.metadata["citations"]) if isinstance(agent_response.metadata["citations"], list) else agent_response.metadata["citations"]
         if "knowledge_base_id" in agent_response.metadata:
             ai_metadata["knowledge_base_id"] = agent_response.metadata["knowledge_base_id"]
+        if agent_response.trace_id:
+            ai_metadata["trace_id"] = agent_response.trace_id
         
         logger.info("AI metadata: %s", ai_metadata)
 
