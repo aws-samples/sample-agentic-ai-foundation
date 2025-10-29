@@ -1,7 +1,7 @@
 """Domain service interface for agent operations."""
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 from cx_agent_backend.domain.entities.conversation import Message
@@ -25,6 +25,7 @@ class AgentRequest:
     model: str
     session_id: str | None = None
     trace_id: str | None = None
+    langfuse_tags: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -34,6 +35,7 @@ class AgentResponse:
     agent_type: AgentType
     tools_used: list[str]
     metadata: dict[str, str]
+    trace_id: str | None = None
 
 
 class AgentService(ABC):

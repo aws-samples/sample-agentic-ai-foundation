@@ -132,6 +132,7 @@ async def send_message(
             user_id=user_id,
             content=request.prompt,
             model=request.model,
+            langfuse_tags=request.langfuse_tags,
         )
         
         return SendMessageResponse(

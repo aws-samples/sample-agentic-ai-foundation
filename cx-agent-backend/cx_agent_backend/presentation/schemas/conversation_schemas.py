@@ -69,6 +69,7 @@ class SendMessageRequest(BaseModel):
     model: str = Field(default="gpt-4o-mini", min_length=1)
     user_id: str | None = Field(None, min_length=1, max_length=100)
     feedback: FeedbackRequest | None = None
+    langfuse_tags: list[str] = Field(default_factory=list, description="Tags to add to Langfuse trace")
 
 
 class SendMessageResponse(BaseModel):

@@ -138,6 +138,7 @@ class LangGraphAgentService(AgentService):
                                 input_result.blocked_categories
                             )
                         },
+                        trace_id=predefined_trace_id,
                     )
 
         # Get memory parameters from environment or request
@@ -176,10 +177,20 @@ class LangGraphAgentService(AgentService):
                 name="langchain-request",
                 trace_context={"trace_id": predefined_trace_id}
             ) as span:
-                span.update_trace(
-                    user_id=request.user_id,
-                    input={"messages": [msg.content for msg in request.messages]}
-                )
+                trace_update_params = {
+                    "user_id": request.user_id,
+                    "input": {"messages": [msg.content for msg in request.messages]}
+                }
+                # Add default tag and any additional tags
+                tags = ["langgraph-cx-agent"]
+                if request.langfuse_tags:
+                    logger.info(f"Adding langfuse_tags: {request.langfuse_tags}")
+                    tags.extend(request.langfuse_tags)
+                else:
+                    logger.info("No langfuse_tags provided")
+                logger.info(f"Final tags for trace: {tags}")
+                trace_update_params["tags"] = tags
+                span.update_trace(**trace_update_params)
                 
                 config = RunnableConfig(
                     configurable={
@@ -283,13 +294,13 @@ class LangGraphAgentService(AgentService):
                     metadata={
                         "blocked_categories": ",".join(output_result.blocked_categories)
                     },
+                    trace_id=trace_id,
                 )
 
         # Add trace metadata
         metadata = {
             "model": request.model,
             "agent_type": request.agent_type.value,
-            "trace_id": trace_id,
         }
         
         # Add citations to metadata if available
@@ -302,6 +313,7 @@ class LangGraphAgentService(AgentService):
             agent_type=request.agent_type,
             tools_used=tools_used,
             metadata=metadata,
+            trace_id=trace_id
         )
 
     async def stream_response(self, request: AgentRequest):
