@@ -121,3 +121,67 @@ uv run streamlit run src/app.py --server.port 8501 --server.address 127.0.0.1
 
 Refer to the **agentcore_runtime_deployment.ipynb** notebook to deploy your agent using [Bedrock AgentCore Runtime](https://docs.aws.amazon.com/bedrock-agentcore/latest/devguide/agents-tools-runtime.html).
 
+## Evaluation
+
+The platform includes comprehensive evaluation capabilities to assess agent performance across multiple dimensions.
+
+### Evaluation Setup
+
+The evaluation system consists of:
+- **offline_evaluation.py**: Main evaluation script that runs test queries and calculates metrics
+- **response_quality_evaluator.py**: Uses Bedrock LLM to evaluate response quality
+- **groundtruth.json**: Test queries with expected tool usage (create this file with your test cases)
+
+### Prerequisites
+
+1. **Langfuse Configuration**: Ensure Langfuse is properly configured for trace collection
+2. **Agent Endpoint**: Have your agent running locally or deployed
+3. **AWS Credentials**: For Bedrock access (response quality evaluation)
+4. **Test Data**: Create `groundtruth.json` with test queries:
+
+```json
+[
+  {
+    "query": "How do I reset my router hub?",
+    "expected_tools": ["retrieve_context"]
+  }
+]
+```
+
+### Running Evaluation
+
+```bash
+# Run offline evaluation
+python offline_evaluation.py
+
+# Or evaluate existing trace data
+python response_quality_evaluator.py
+```
+
+### Metrics Collected
+
+- **Success Rate**: Percentage of successful agent responses
+- **Tool Accuracy**: How well the agent selects expected tools
+- **Retrieval Quality**: Relevance scores from knowledge base retrieval
+- **Response Quality**: AI-evaluated metrics using Bedrock LLM:
+  - **Faithfulness** (0.0-1.0): How well the response sticks to provided context without hallucination
+  - **Correctness** (0.0-1.0): How factually accurate and technically correct the response is
+  - **Helpfulness** (0.0-1.0): How useful and relevant the response is to answering the user's query
+- **Latency Metrics**: Total and per-tool response times
+
+### Output Files
+
+- **comprehensive_results.csv**: Complete evaluation results with all metrics
+- **trace_metrics.csv**: Raw trace data from Langfuse
+- **response_quality_scores.csv**: Detailed response quality evaluations
+
+### Configuration
+
+Set environment variables:
+```bash
+export AGENT_ARN="http://localhost:8080"  # or your deployed endpoint
+export LANGFUSE_SECRET_KEY="your-key"
+export LANGFUSE_PUBLIC_KEY="your-key"
+export LANGFUSE_HOST="your-langfuse-host"
+```
+
