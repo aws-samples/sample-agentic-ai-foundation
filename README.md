@@ -125,6 +125,17 @@ Refer to the **agentcore_runtime_deployment.ipynb** notebook to deploy your agen
 
 The platform includes comprehensive evaluation capabilities to assess agent performance across multiple dimensions.
 
+### How Evaluation Works
+
+The evaluation system runs test queries against your agent, collects execution traces, and measures performance:
+
+1. **Load test queries** from `groundtruth.json` with expected tool usage
+2. **Send queries to agent** endpoint and capture responses with trace IDs
+3. **Wait for traces** to be available in Langfuse observability platform
+4. **Extract metrics** from traces including tool calls, retrieval scores, and latencies
+5. **Evaluate response quality** using Bedrock LLM to score faithfulness, correctness, and helpfulness
+6. **Calculate performance metrics** and save comprehensive results to CSV files
+
 ### Evaluation Setup
 
 The evaluation system consists of:
@@ -134,10 +145,16 @@ The evaluation system consists of:
 
 ### Prerequisites
 
-1. **Langfuse Configuration**: Ensure Langfuse is properly configured for trace collection
-2. **Agent Endpoint**: Have your agent running locally or deployed
-3. **AWS Credentials**: For Bedrock access (response quality evaluation)
-4. **Test Data**: Create `groundtruth.json` with test queries:
+1. **Environment Variables**: Export Langfuse and AWS credentials:
+   ```bash
+   export LANGFUSE_SECRET_KEY="your-key"
+   export LANGFUSE_PUBLIC_KEY="your-key"
+   export LANGFUSE_HOST="your-langfuse-host"
+   export AWS_ACCESS_KEY_ID="your-key"
+   export AWS_SECRET_ACCESS_KEY="your-key"
+   ```
+2. **Agent Endpoint**: Have your agent running locally (`http://localhost:8080`) or deployed on Bedrock AgentCore
+3. **Test Data**: Create `groundtruth.json` with test queries:
 
 ```json
 [
@@ -177,11 +194,12 @@ python response_quality_evaluator.py
 
 ### Configuration
 
-Set environment variables:
+Set agent endpoint (local or AgentCore):
 ```bash
-export AGENT_ARN="http://localhost:8080"  # or your deployed endpoint
-export LANGFUSE_SECRET_KEY="your-key"
-export LANGFUSE_PUBLIC_KEY="your-key"
-export LANGFUSE_HOST="your-langfuse-host"
+# For local agent
+export AGENT_ARN="http://localhost:8080"
+
+# For Bedrock AgentCore deployment
+export AGENT_ARN="your-agentcore-endpoint"
 ```
 
