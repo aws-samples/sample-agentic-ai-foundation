@@ -125,6 +125,8 @@ Refer to the **agentcore_runtime_deployment.ipynb** notebook to deploy your agen
 
 The platform includes comprehensive evaluation capabilities to assess agent performance across multiple dimensions.
 
+![alt text](assets/offline_eval.png)
+
 ### How Evaluation Works
 
 The evaluation system runs test queries against your agent, collects execution traces, and measures performance:
