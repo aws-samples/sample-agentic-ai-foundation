@@ -39,7 +39,7 @@ terraform apply
 ```
 
 This will deploy:
-- Bedrock Agent IAM Role with required permissions
+- Bedrock AgentCore IAM Role with required permissions
 - Knowledge Base stack (S3 bucket, OpenSearch Serverless, Knowledge Base)
 - Bedrock Guardrails for content filtering
 - Cognito User Pool for authentication
