@@ -8,15 +8,6 @@ import sys
 from fastapi import FastAPI, HTTPException, Request
 import structlog
 
-# Configure basic logging to terminal
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.StreamHandler(sys.stdout)
-    ]
-)
-
 from cx_agent_backend.infrastructure.config.container import Container
 from cx_agent_backend.infrastructure.config.settings import settings
 from cx_agent_backend.presentation.api.conversation_router import (
