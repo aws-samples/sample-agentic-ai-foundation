@@ -9,11 +9,6 @@ resource "aws_secretsmanager_secret_version" "cognito_client_secret" {
 
 resource "aws_secretsmanager_secret" "zendesk_credentials" {
   name = "zendesk_credentials"
-  
-  # Basic rotation schedule only - no managed rotation function
-  rotation_rules {
-    automatically_after_days = 90
-  }
 }
 
 resource "aws_secretsmanager_secret_version" "zendesk_credentials" {
@@ -40,10 +35,6 @@ resource "aws_secretsmanager_secret_version" "langfuse_credentials" {
 
 resource "aws_secretsmanager_secret" "gateway_credentials" {
   name = "gateway_credentials"
-  
-  rotation_rules {
-    automatically_after_days = 90
-  }
 }
 
 resource "aws_secretsmanager_secret_version" "gateway_credentials" {
