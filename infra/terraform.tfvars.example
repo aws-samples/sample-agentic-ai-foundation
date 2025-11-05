@@ -1,3 +1,7 @@
+# Container Image Build Variables
+## Uncomment the below line if you use 'finch' instead of Docker:
+# container_image_build_tool = "finch"
+
 # Bedrock Role Variables
 bedrock_role_name = "agentic-ai-bedrock-role"
 

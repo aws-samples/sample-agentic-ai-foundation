@@ -3,6 +3,12 @@ variable "role_name" {
   type        = string
 }
 
+variable "container_repository_arn" {
+  description = "ARN of specific Amazon ECR repository to grant access (default: all)"
+  default     = ""
+  type        = string
+}
+
 variable "knowledge_base_id" {
   description = "Knowledge Base ID to restrict access to"
   type        = string

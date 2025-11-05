@@ -34,9 +34,13 @@ resource "aws_iam_policy" "ecr_permissions" {
           "ecr:BatchGetImage",
           "ecr:GetDownloadUrlForLayer"
         ]
-        Resource = [
-          "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/*"
-        ]
+        Resource = (
+          var.container_repository_arn == "" ?
+          [
+            "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/*"
+          ] :
+          [var.container_repository_arn]
+        )
       },
       {
         Sid    = "ECRTokenAccess"

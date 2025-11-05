@@ -1,9 +1,19 @@
+# Agent Container Image
+module "container_image" {
+  source = "./modules/container-image"
+
+  force_image_rebuild = var.force_image_rebuild
+  image_build_tool    = var.container_image_build_tool
+  repository_name     = "langgraph-cx-agent"
+}
+
 # Bedrock Agent Role
 module "bedrock_role" {
-  source            = "./modules/agentcore-iam-role"
-  role_name         = var.bedrock_role_name
-  knowledge_base_id = module.kb_stack.knowledge_base_id
-  guardrail_id      = module.guardrail.guardrail_id
+  source                   = "./modules/agentcore-iam-role"
+  container_repository_arn = module.container_image.ecr_repository_arn
+  role_name                = var.bedrock_role_name
+  knowledge_base_id        = module.kb_stack.knowledge_base_id
+  guardrail_id             = module.guardrail.guardrail_id
 }
 
 # Knowledge Base Stack
