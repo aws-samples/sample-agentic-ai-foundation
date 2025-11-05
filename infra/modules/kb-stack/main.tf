@@ -42,6 +42,7 @@ resource "aws_s3_bucket_lifecycle_configuration" "kb_bucket_lifecycle" {
     id     = "knowledge_base_lifecycle"
     status = "Enabled"
 
+    filter {}
     transition {
       days          = 30
       storage_class = "STANDARD_IA"
