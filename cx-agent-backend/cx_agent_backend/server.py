@@ -4,6 +4,7 @@ from datetime import datetime
 import time
 import logging
 import sys
+from uuid import UUID
 
 from fastapi import FastAPI, HTTPException, Request
 import structlog
@@ -69,8 +70,14 @@ def create_app() -> FastAPI:
         langfuse_tags = input_data.get("langfuse_tags", [])
         
         # Convert conversation_id to UUID
-        from uuid import UUID
-        conversation_id = UUID(conversation_id_str) if conversation_id_str else None
+        try:
+            conversation_id = UUID(conversation_id_str) if conversation_id_str else None
+        except:
+            logger.exception(
+                "Failed to parse provided Conversation ID '%s' to valid UUID - Treating as empty",
+                conversation_id_str
+            )
+            conversation_id = None
         
         if not prompt and not feedback:
             raise HTTPException(status_code=400, detail="Either prompt or feedback must be provided in input.")
