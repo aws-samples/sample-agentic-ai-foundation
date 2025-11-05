@@ -11,7 +11,11 @@ resource "aws_iam_policy" "bedrock_permissions" {
           "bedrock:InvokeModel",
           "bedrock:InvokeModelWithResponseStream"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/anthropic.*",
+          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/amazon.*",
+          "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/meta.*"
+        ]
       }
     ]
   })
@@ -28,8 +32,7 @@ resource "aws_iam_policy" "ecr_permissions" {
         Effect = "Allow"
         Action = [
           "ecr:BatchGetImage",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:GetAuthorizationToken"
+          "ecr:GetDownloadUrlForLayer"
         ]
         Resource = [
           "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/*"
@@ -41,6 +44,8 @@ resource "aws_iam_policy" "ecr_permissions" {
         Action = [
           "ecr:GetAuthorizationToken"
         ]
+        # This action does not accept any restrictions on the resource, per the docs:
+        # https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonelasticcontainerregistry.html
         Resource = "*"
       }
     ]
@@ -100,9 +105,14 @@ resource "aws_iam_policy" "monitoring_permissions" {
           "xray:GetSamplingRules",
           "xray:GetSamplingTargets"
         ]
-        Resource = "*"
+        Resource = [
+          "arn:aws:xray:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:trace/*"
+        ]
       },
       {
+        # WILDCARD JUSTIFICATION: CloudWatch PutMetricData requires Resource="*" 
+        # as per AWS documentation. Condition restricts to bedrock-agentcore namespace only.
+        # Reference: https://docs.aws.amazon.com/AmazonCloudWatch/latest/APIReference/API_PutMetricData.html
         Effect   = "Allow"
         Resource = "*"
         Action   = "cloudwatch:PutMetricData"
