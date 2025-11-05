@@ -32,8 +32,7 @@ resource "aws_iam_policy" "ecr_permissions" {
         Effect = "Allow"
         Action = [
           "ecr:BatchGetImage",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:GetAuthorizationToken"
+          "ecr:GetDownloadUrlForLayer"
         ]
         Resource = [
           "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/*"
@@ -45,9 +44,9 @@ resource "aws_iam_policy" "ecr_permissions" {
         Action = [
           "ecr:GetAuthorizationToken"
         ]
-        Resource = [
-          "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:*"
-        ]
+        # This action does not accept any restrictions on the resource, per the docs:
+        # https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonelasticcontainerregistry.html
+        Resource = "*"
       }
     ]
   })
