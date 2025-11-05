@@ -20,3 +20,9 @@ variable "guardrail_id" {
   type        = string
   default     = "*"
 }
+
+variable "agent_memory_arn" {
+  description = "ARN of specific AgentCore Memory to grant access (default: all)"
+  default     = ""
+  type        = string
+}

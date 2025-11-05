@@ -95,8 +95,3 @@ variable "tavily_api_key" {
   type        = string
   sensitive   = true
 }
-
-variable "ac_stm_memory_id" {
-  description = "ID of the AC STM resource"
-  type        = string
-}

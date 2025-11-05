@@ -7,9 +7,16 @@ module "container_image" {
   repository_name     = "langgraph-cx-agent"
 }
 
+# Agent Memory
+resource "aws_bedrockagentcore_memory" "agent_memory" {
+  name                  = "CxMemory"
+  event_expiry_duration = 30
+}
+
 # Bedrock Agent Role
 module "bedrock_role" {
   source                   = "./modules/agentcore-iam-role"
+  agent_memory_arn         = aws_bedrockagentcore_memory.agent_memory.arn
   container_repository_arn = module.container_image.ecr_repository_arn
   role_name                = var.bedrock_role_name
   knowledge_base_id        = module.kb_stack.knowledge_base_id
@@ -45,7 +52,7 @@ module "parameters" {
   guardrail_id      = module.guardrail.guardrail_id
   user_pool_id      = module.cognito.user_pool_id
   client_id         = module.cognito.user_pool_client_id
-  ac_stm_memory_id  = var.ac_stm_memory_id
+  ac_stm_memory_id  = aws_bedrockagentcore_memory.agent_memory.id
 
   depends_on = [
     module.kb_stack,
