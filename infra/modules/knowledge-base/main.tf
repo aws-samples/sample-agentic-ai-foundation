@@ -7,15 +7,13 @@ resource "aws_iam_role_policy" "bedrock_kb_sample_kb_model" {
     Version = "2012-10-17"
     Statement = [
       {
+        # We'd like to scope this down further, but many of the individual AOSS IAM actions don't
+        # support resource-level permissions, so currently using this all-inclusive one (as
+        # recommended by Bedrock User Guide). See:
+        # - https://docs.aws.amazon.com/service-authorization/latest/reference/list_amazonopensearchserverless.html
+        # - https://docs.aws.amazon.com/bedrock/latest/userguide/kb-permissions.html#kb-permissions-oss
         Action   = [
-          "aoss:CreateIndex",
-          "aoss:DescribeIndex",
-          "aoss:UpdateIndex",
-          "aoss:DeleteIndex",
-          "aoss:WriteDocument",
-          "aoss:ReadDocument",
-          "aoss:SearchDocument",
-          "aoss:DeleteDocument"
+          "aoss:APIAccessAll",
         ]
         Effect   = "Allow"
         Resource = [var.opensearch_arn]
