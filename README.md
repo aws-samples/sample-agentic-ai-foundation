@@ -205,3 +205,12 @@ export AGENT_ARN="http://localhost:8080"
 export AGENT_ARN="your-agentcore-endpoint"
 ```
 
+
+## Security
+
+See [CONTRIBUTING](CONTRIBUTING.md#security-issue-notifications) for more information.
+
+
+## License
+
+This library is licensed under the MIT-0 License. See the LICENSE file.
