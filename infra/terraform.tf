@@ -7,7 +7,7 @@ terraform {
 
   required_providers {
     aws = {
-      source  = "hashicorp/aws"
+      source = "hashicorp/aws"
       # v6.18 added support for Bedrock AgentCore Memory
       version = ">= 6.18"
     }

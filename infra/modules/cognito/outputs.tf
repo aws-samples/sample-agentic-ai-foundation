@@ -8,6 +8,10 @@ output "user_pool_arn" {
   value       = aws_cognito_user_pool.user_pool.arn
 }
 
+output "user_pool_discovery_url" {
+  value       = "https://cognito-idp.${data.aws_region.current.name}.amazonaws.com/${aws_cognito_user_pool.user_pool.id}/.well-known/openid-configuration"
+}
+
 output "user_pool_client_id" {
   description = "ID of the Cognito User Pool Client"
   value       = aws_cognito_user_pool_client.user_pool_client.id

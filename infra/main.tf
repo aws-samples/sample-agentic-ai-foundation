@@ -81,3 +81,26 @@ module "secrets" {
   depends_on = [module.cognito]
 }
 
+# Deploy the endpoint
+resource "aws_bedrockagentcore_agent_runtime" "agent_runtime" {
+  agent_runtime_name = "langgraph_cx_agent"
+  description        = "Example customer service agent for Agentic AI Foundation"
+  role_arn           = module.bedrock_role.role_arn
+  authorizer_configuration {
+    custom_jwt_authorizer {
+      discovery_url   = module.cognito.user_pool_discovery_url
+      allowed_clients = [module.cognito.user_pool_client_id]
+    }
+  }
+  agent_runtime_artifact {
+    container_configuration {
+      container_uri = module.container_image.ecr_image_uri
+    }
+  }
+  network_configuration {
+    network_mode = "PUBLIC"
+  }
+  protocol_configuration {
+    server_protocol = "HTTP"
+  }
+}
