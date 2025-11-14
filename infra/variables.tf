@@ -1,3 +1,16 @@
+# Container Image Variables
+variable "force_image_rebuild" {
+  description = "Set true to force rebuild+push of container image even if source seems unchanged"
+  default     = false
+  type        = bool
+}
+
+variable "container_image_build_tool" {
+  description = "Either 'docker' or a Docker-compatible alternative e.g. 'finch'"
+  default     = "docker"
+  type        = string
+}
+
 # Bedrock Role Variables
 variable "bedrock_role_name" {
   description = "Name of the Bedrock agent role"
@@ -81,9 +94,4 @@ variable "tavily_api_key" {
   default     = ""
   type        = string
   sensitive   = true
-}
-
-variable "ac_stm_memory_id" {
-  description = "ID of the AC STM resource"
-  type        = string
 }

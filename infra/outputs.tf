@@ -1,3 +1,8 @@
+output "agent_runtime_arn" {
+  description = "ARN of deployed AgentCore Runtime"
+  value       = aws_bedrockagentcore_agent_runtime.agent_runtime.agent_runtime_arn
+}
+
 output "bedrock_role_arn" {
   description = "ARN of the Bedrock agent role"
   value       = module.bedrock_role.role_arn

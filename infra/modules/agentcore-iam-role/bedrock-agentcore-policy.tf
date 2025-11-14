@@ -34,9 +34,13 @@ resource "aws_iam_policy" "ecr_permissions" {
           "ecr:BatchGetImage",
           "ecr:GetDownloadUrlForLayer"
         ]
-        Resource = [
-          "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/*"
-        ]
+        Resource = (
+          var.container_repository_arn == "" ?
+          [
+            "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/*"
+          ] :
+          [var.container_repository_arn]
+        )
       },
       {
         Sid    = "ECRTokenAccess"
@@ -144,6 +148,35 @@ resource "aws_iam_policy" "agentcore_permissions" {
           "arn:aws:bedrock-agentcore:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:workload-identity-directory/default",
           "arn:aws:bedrock-agentcore:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:workload-identity-directory/default/workload-identity/*"
         ]
+      },
+      {
+        Sid    = "AccessMemory"
+        Effect = "Allow"
+        Action = [
+          "bedrock-agentcore:BatchCreateMemoryRecords",
+          "bedrock-agentcore:BatchDeleteMemoryRecords",
+          "bedrock-agentcore:BatchUpdateMemoryRecords",
+          "bedrock-agentcore:CreateEvent",
+          "bedrock-agentcore:DeleteEvent",
+          "bedrock-agentcore:DeleteMemoryRecord",
+          "bedrock-agentcore:GetEvent",
+          "bedrock-agentcore:GetMemory",
+          "bedrock-agentcore:GetMemoryRecord",
+          "bedrock-agentcore:ListActors",
+          "bedrock-agentcore:ListEvents",
+          "bedrock-agentcore:ListMemoryRecords",
+          "bedrock-agentcore:ListSessions",
+          "bedrock-agentcore:ListTagsForResource",
+          "bedrock-agentcore:RetrieveMemoryRecords",
+          "bedrock-agentcore:TagResource",
+        ]
+        Resource = (
+          var.agent_memory_arn == "" ?
+          [
+            "arn:aws:bedrock-agentcore:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:memory/*"
+          ] :
+          [var.agent_memory_arn]
+        )
       }
     ]
   })

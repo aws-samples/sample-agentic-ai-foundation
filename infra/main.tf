@@ -1,9 +1,26 @@
+# Agent Container Image
+module "container_image" {
+  source = "./modules/container-image"
+
+  force_image_rebuild = var.force_image_rebuild
+  image_build_tool    = var.container_image_build_tool
+  repository_name     = "langgraph-cx-agent"
+}
+
+# Agent Memory
+resource "aws_bedrockagentcore_memory" "agent_memory" {
+  name                  = "CxMemory"
+  event_expiry_duration = 30
+}
+
 # Bedrock Agent Role
 module "bedrock_role" {
-  source            = "./modules/agentcore-iam-role"
-  role_name         = var.bedrock_role_name
-  knowledge_base_id = module.kb_stack.knowledge_base_id
-  guardrail_id      = module.guardrail.guardrail_id
+  source                   = "./modules/agentcore-iam-role"
+  agent_memory_arn         = aws_bedrockagentcore_memory.agent_memory.arn
+  container_repository_arn = module.container_image.ecr_repository_arn
+  role_name                = var.bedrock_role_name
+  knowledge_base_id        = module.kb_stack.knowledge_base_id
+  guardrail_id             = module.guardrail.guardrail_id
 }
 
 # Knowledge Base Stack
@@ -35,7 +52,7 @@ module "parameters" {
   guardrail_id      = module.guardrail.guardrail_id
   user_pool_id      = module.cognito.user_pool_id
   client_id         = module.cognito.user_pool_client_id
-  ac_stm_memory_id  = var.ac_stm_memory_id
+  ac_stm_memory_id  = aws_bedrockagentcore_memory.agent_memory.id
 
   depends_on = [
     module.kb_stack,
@@ -64,3 +81,26 @@ module "secrets" {
   depends_on = [module.cognito]
 }
 
+# Deploy the endpoint
+resource "aws_bedrockagentcore_agent_runtime" "agent_runtime" {
+  agent_runtime_name = "langgraph_cx_agent"
+  description        = "Example customer service agent for Agentic AI Foundation"
+  role_arn           = module.bedrock_role.role_arn
+  authorizer_configuration {
+    custom_jwt_authorizer {
+      discovery_url   = module.cognito.user_pool_discovery_url
+      allowed_clients = [module.cognito.user_pool_client_id]
+    }
+  }
+  agent_runtime_artifact {
+    container_configuration {
+      container_uri = module.container_image.ecr_image_uri
+    }
+  }
+  network_configuration {
+    network_mode = "PUBLIC"
+  }
+  protocol_configuration {
+    server_protocol = "HTTP"
+  }
+}
