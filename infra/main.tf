@@ -103,4 +103,14 @@ resource "aws_bedrockagentcore_agent_runtime" "agent_runtime" {
   protocol_configuration {
     server_protocol = "HTTP"
   }
+  environment_variables = {
+    "LOG_LEVEL" = "INFO"
+    "OTEL_EXPORTER_OTLP_ENDPOINT" = "${var.langfuse_host}/api/public/otel"
+    "OTEL_EXPORTER_OTLP_HEADERS" = "Authorization=Basic ${base64encode("${var.langfuse_public_key}:${var.langfuse_secret_key}")}"
+    "DISABLE_ADOT_OBSERVABILITY" = "true",
+    "LANGSMITH_OTEL_ENABLED" = "true",
+    "LANGSMITH_TRACING" = "true"
+
+  }
+
 }
