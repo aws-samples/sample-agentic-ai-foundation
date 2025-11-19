@@ -30,7 +30,7 @@ class ConversationService:
         return conversation
 
     async def send_message(
-        self, conversation_id: UUID, user_id: str, content: str, model: str, langfuse_tags: list[str] = None
+        self, conversation_id: UUID, user_id: str, content: str, model: str, langfuse_tags: list[str] = None, jwt_token: str = None
     ) -> tuple[Message, list[str]]:
         """Send a message and get AI response."""
         # Get or create conversation
@@ -70,6 +70,7 @@ class ConversationService:
             session_id=str(conversation.id),
             trace_id=None,  # Can be set from FastAPI layer
             langfuse_tags=langfuse_tags or [],
+            jwt_token=jwt_token,
         )
         agent_response = await self._agent_service.process_request(agent_request)
         

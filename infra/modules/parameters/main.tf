@@ -27,3 +27,15 @@ resource "aws_ssm_parameter" "client_id" {
   type  = "String"
   value = var.client_id
 }
+
+resource "aws_ssm_parameter" "gateway_url" {
+  name  = "/amazon/gateway_url"
+  type  = "String"
+  value = var.gateway_url
+}
+
+resource "aws_ssm_parameter" "oauth_token_url" {
+  name  = "/cognito/oauth_token_url"
+  type  = "String"
+  value = var.oauth_token_url
+}

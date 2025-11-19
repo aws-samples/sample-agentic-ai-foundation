@@ -19,7 +19,11 @@ dependencies = [
     "tavily-python>=0.3.0",
     "uvicorn[standard]>=0.24.0",
     "opentelemetry-instrumentation-langchain>=0.48.1",
-    "langsmith[otel]"
+    "langsmith[otel]",
+    "bedrock-agentcore-starter-toolkit",
+    "mcp>=1.0.0",
+    "langchain-mcp>=0.1.0",
+    "langchain-mcp-adapters>=0.1.0"
 ]
 
 [project.optional-dependencies]

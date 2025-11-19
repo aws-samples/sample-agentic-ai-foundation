@@ -6,8 +6,17 @@ from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 import os
 import logging
+import json
 from langgraph.prebuilt import create_react_agent
 from bedrock_agentcore.memory import MemoryClient
+try:
+    from mcp import ClientSession
+    from mcp.client.streamable_http import streamablehttp_client
+    from langchain_mcp_adapters.tools import load_mcp_tools
+    import requests
+    GATEWAY_AVAILABLE = True
+except ImportError:
+    GATEWAY_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
@@ -22,9 +31,11 @@ from cx_agent_backend.domain.services.guardrail_service import GuardrailAssessme
 from cx_agent_backend.domain.services.llm_service import LLMService
 from cx_agent_backend.infrastructure.adapters.tools import tools
 from cx_agent_backend.infrastructure.aws.parameter_store_reader import AWSParameterStoreReader
+from cx_agent_backend.infrastructure.aws.secret_reader import AWSSecretsReader
 
 
 parameter_store_reader = AWSParameterStoreReader()
+secret_reader = AWSSecretsReader()
 
 
 class LangGraphAgentService(AgentService):
@@ -38,20 +49,79 @@ class LangGraphAgentService(AgentService):
         self._guardrail_service = guardrail_service
         self._llm_service = llm_service
 
-    def _create_agent(self, agent_type: AgentType, model: str, memory_id: str = None, actor_id: str = None, session_id: str = None) -> any:
+    
+    async def _get_gateway_tools(self, user_jwt_token: str = None):
+        """Get gateway tools using MCP Client with caching."""
+        if not GATEWAY_AVAILABLE:
+            logger.warning("Gateway not available")
+            return []
+        
+
+            
+        try:
+            # Get gateway URL from parameter store
+            gateway_url = parameter_store_reader.get_parameter("/amazon/gateway_url")
+            if not gateway_url:
+                logger.warning("Gateway URL not available, skipping gateway tools")
+                return []
+            
+            # Get client credentials for token
+            client_id = parameter_store_reader.get_parameter("/cognito/client_id")
+            client_secret = secret_reader.read_secret("cognito_client_secret")
+            token_url = parameter_store_reader.get_parameter("/cognito/oauth_token_url")
+            
+            if not all([client_id, client_secret, token_url]):
+                logger.warning("Missing Cognito credentials, skipping gateway tools")
+                return []
+            
+            # Fetch access token
+            token_response = requests.post(
+                token_url,
+                data={
+                    "grant_type": "client_credentials",
+                    "client_id": client_id,
+                    "client_secret": client_secret
+                },
+                headers={'Content-Type': 'application/x-www-form-urlencoded'}
+            )
+            
+            if token_response.status_code != 200:
+                logger.warning(f"Failed to get access token: {token_response.text}")
+                return []
+            
+            access_token = token_response.json().get('access_token')
+            if not access_token:
+                logger.warning("No access token received")
+                return []
+            
+            # Use async context manager to get tools
+            async with streamablehttp_client(gateway_url, headers={"Authorization": f"Bearer {access_token}"}) as (read, write, _):
+                async with ClientSession(read, write) as session:
+                    await session.initialize()
+                    mcp_tools = await load_mcp_tools(session)
+                    logger.info(f"Retrieved {len(mcp_tools)} gateway tools")
+                    
+                    # Log tool details for debugging
+                    for tool in mcp_tools:
+                        logger.info(f"Gateway tool: {tool.name} - {tool.description}")
+                    
+                    return mcp_tools
+            
+        except Exception as e:
+            logger.warning(f"Failed to get gateway tools: {e}")
+            return []
+    
+
+
+    async def _create_agent(self, agent_type: AgentType, model: str, memory_id: str = None, actor_id: str = None, session_id: str = None, user_jwt_token: str = None) -> any:
         """Create agent with specific model."""
-        from langchain_openai import ChatOpenAI
+        from langchain_aws import ChatBedrock
         
-        # Remove vendor prefix if present (format: vendor/model)
-        processed_model = model.split("/", 1)[-1] if "/" in model else model
-        
-        # Create LLM with the specified model
-        llm = ChatOpenAI(
-            api_key=self._llm_service.api_key,
-            base_url=self._llm_service.base_url,
-            model=processed_model,
-            temperature=0.7,
-            streaming=True,
+        # Use ChatBedrock directly
+        llm = ChatBedrock(
+            model_id="anthropic.claude-3-sonnet-20240229-v1:0",
+            region_name=os.getenv('AWS_REGION', 'us-east-1'),
+            temperature=0.7
         )
         
         # Add memory tool if memory parameters provided
@@ -78,21 +148,27 @@ class LangGraphAgentService(AgentService):
 
         system_message = (
             "You are a professional customer service agent for AnyCompany. Your goal is to provide accurate, helpful responses while following company protocols.\n\n"
-            "TOOL USAGE PRIORITY:\n"
-            "1. ALWAYS start with retrieve_context to search our knowledge base for company information\n"
-            "2. If knowledge base lacks sufficient details, supplement with web_search\n"
-            "3. For ticket requests, use create_support_ticket with complete details\n"
-            "4. Use get_support_tickets to check existing ticket status\n\n"
+            "TOOL USAGE STRATEGY:\n"
+            "1. For COMPANY-RELATED queries (products, services, policies, procedures, support): Use retrieve_context to search our knowledge base\n"
+            "2. For GENERIC queries (general information, current events, how-to guides): Use tavily_search via gateway\n"
+            "3. If retrieve_context returns no results or insufficient information, fallback to tavily_search\n"
+            "4. For ticket requests: Use create_support_ticket with complete details\n"
+            "5. For ticket status: Use get_support_tickets\n\n"
+            "DO NOT use both retrieve_context and tavily_search for the same query - choose the most appropriate tool based on the query type.\n\n"
             "RESPONSE GUIDELINES:\n"
             "- Be concise but thorough in explanations\n"
             "- Always cite sources when using knowledge base or web information\n"
             "- For ticket creation, gather: subject, description, priority, and contact info\n"
-            "- If you cannot find information, clearly state limitations and offer alternatives\n"
+            "- If knowledge base has no relevant information, clearly state this and use web search\n"
             "- Maintain a professional, empathetic tone throughout interactions"
         )
 
-        # Combine existing tools with memory tools
-        all_tools = tools + memory_tools
+        # Get gateway tools for this request using user's JWT token
+        gateway_tools = await self._get_gateway_tools(user_jwt_token)
+        
+        # Combine existing tools with memory tools and gateway tools
+        # all_tools = tools + memory_tools + gateway_tools
+        all_tools = gateway_tools
         
         return create_react_agent(llm, tools=all_tools, prompt=system_message), memory_client
 
@@ -141,7 +217,10 @@ class LangGraphAgentService(AgentService):
         actor_id = request.user_id
         session_id = request.session_id
         
-        agent, memory_client = self._create_agent(request.agent_type, request.model, stm_memory_id, actor_id, session_id)
+        # Extract user JWT token from request
+        user_jwt_token = request.jwt_token
+        
+        agent, memory_client = await self._create_agent(request.agent_type, request.model, stm_memory_id, actor_id, session_id, user_jwt_token)
 
         # Convert domain messages to LangChain format
         lc_messages = []
@@ -161,9 +240,12 @@ class LangGraphAgentService(AgentService):
             },
         )
         
-        # Invoke agent
+        # Invoke agent with recursion limit
         logger.debug("Invoking agent with %s messages", len(lc_messages))
-        response = await agent.ainvoke({"messages": lc_messages}, config=config)
+        response = await agent.ainvoke(
+            {"messages": lc_messages}, 
+            config
+        )
         
         # Save conversation to memory if available
         if memory_client and lc_messages:

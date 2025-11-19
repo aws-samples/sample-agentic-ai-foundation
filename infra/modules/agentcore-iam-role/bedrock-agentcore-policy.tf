@@ -250,6 +250,16 @@ resource "aws_iam_policy" "bedrock_services_permissions" {
         Resource = [
           "arn:aws:bedrock:${data.aws_region.current.name}::foundation-model/*"
         ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "bedrock-agentcore:InvokeGateway",
+          "bedrock-agentcore:ListGatewayTargets"
+        ]
+        Resource = [
+          "arn:aws:bedrock-agentcore:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:gateway/*"
+        ]
       }
     ]
   })
