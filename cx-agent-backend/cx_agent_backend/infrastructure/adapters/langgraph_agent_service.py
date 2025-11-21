@@ -1,13 +1,12 @@
 """LangGraph implementation of agent service."""
 
+import base64
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_core.runnables import RunnableConfig
 from langchain_core.tools import tool
 import os
 import logging
 from langgraph.prebuilt import create_react_agent
-from langfuse import get_client, Langfuse
-from langfuse.langchain import CallbackHandler
 from bedrock_agentcore.memory import MemoryClient
 
 logger = logging.getLogger(__name__)
@@ -33,11 +32,9 @@ class LangGraphAgentService(AgentService):
 
     def __init__(
         self,
-        langfuse_config: dict | None = None,
         guardrail_service: GuardrailService | None = None,
         llm_service: LLMService | None = None,
     ):
-        self._langfuse_config = langfuse_config or {}
         self._guardrail_service = guardrail_service
         self._llm_service = llm_service
 
@@ -108,13 +105,7 @@ class LangGraphAgentService(AgentService):
             request.agent_type,
         )
         
-        # Use trace_id from request if provided, otherwise create one
-        langfuse = None
-        predefined_trace_id = getattr(request, 'trace_id', None)
-        if self._langfuse_config.get("enabled"):
-            langfuse = get_client()
-            if not predefined_trace_id:
-                predefined_trace_id = Langfuse.create_trace_id(seed=request.session_id)
+
         
         # Check input guardrails if enabled
         if self._guardrail_service and request.messages:
@@ -138,7 +129,7 @@ class LangGraphAgentService(AgentService):
                                 input_result.blocked_categories
                             )
                         },
-                        trace_id=predefined_trace_id,
+                        trace_id=None,
                     )
 
         # Get memory parameters from environment or request
@@ -160,94 +151,35 @@ class LangGraphAgentService(AgentService):
             elif msg.role == MessageRole.ASSISTANT:
                 lc_messages.append(AIMessage(content=msg.content))
 
-        # Create config with Langfuse callback if enabled
-        trace_id = None
-        response = None
 
-        if self._langfuse_config.get("enabled"):
-            os.environ["LANGFUSE_SECRET_KEY"] = self._langfuse_config.get("secret_key")
-            os.environ["LANGFUSE_PUBLIC_KEY"] = self._langfuse_config.get("public_key")
-            os.environ["LANGFUSE_HOST"] = self._langfuse_config.get("host")
-            
-            trace_id = predefined_trace_id
-            
-            langfuse_handler = CallbackHandler()
-            
-            with langfuse.start_as_current_span(
-                name="langchain-request",
-                trace_context={"trace_id": predefined_trace_id}
-            ) as span:
-                trace_update_params = {
-                    "user_id": request.user_id,
-                    "input": {"messages": [msg.content for msg in request.messages]}
-                }
-                # Add default tag and any additional tags
-                tags = ["langgraph-cx-agent"]
-                if request.langfuse_tags:
-                    logger.info(f"Adding langfuse_tags: {request.langfuse_tags}")
-                    tags.extend(request.langfuse_tags)
-                else:
-                    logger.info("No langfuse_tags provided")
-                logger.info(f"Final tags for trace: {tags}")
-                trace_update_params["tags"] = tags
-                span.update_trace(**trace_update_params)
+
+        # Create config
+        config = RunnableConfig(
+            configurable={
+                "thread_id": f"{request.session_id}",
+                "user_id": request.user_id,
+            },
+        )
+        
+        # Invoke agent
+        logger.debug("Invoking agent with %s messages", len(lc_messages))
+        response = await agent.ainvoke({"messages": lc_messages}, config=config)
+        
+        # Save conversation to memory if available
+        if memory_client and lc_messages:
+            try:
+                last_user_msg = next((msg.content for msg in reversed(lc_messages) if isinstance(msg, HumanMessage)), None)
+                assistant_response = response["messages"][-1].content if response["messages"] else ""
                 
-                config = RunnableConfig(
-                    configurable={
-                        "thread_id": f"{request.session_id}",
-                        "user_id": request.user_id,
-                    },
-                    callbacks=[langfuse_handler],
-                )
-                
-                # Invoke agent
-                logger.debug("Invoking agent with %s messages", len(lc_messages))
-                response = await agent.ainvoke({"messages": lc_messages}, config=config)
-                
-                # Save conversation to memory if available
-                if memory_client and lc_messages:
-                    try:
-                        last_user_msg = next((msg.content for msg in reversed(lc_messages) if isinstance(msg, HumanMessage)), None)
-                        assistant_response = response["messages"][-1].content if response["messages"] else ""
-                        
-                        if last_user_msg and assistant_response:
-                            memory_client.create_event(
-                                memory_id=stm_memory_id,
-                                actor_id=actor_id,
-                                session_id=session_id,
-                                messages=[(last_user_msg, "USER"), (assistant_response, "ASSISTANT")]
-                            )
-                    except Exception as e:
-                        logger.warning(f"Failed to save conversation to memory: {e}")
-                
-                span.update_trace(output={"response": response["messages"][-1].content if response["messages"] else ""})
-        else:
-            config = RunnableConfig(
-                configurable={
-                    "thread_id": f"{request.session_id}",
-                    "user_id": request.user_id,
-                },
-            )
-            
-            # Invoke agent
-            logger.debug("Invoking agent with %s messages", len(lc_messages))
-            response = await agent.ainvoke({"messages": lc_messages}, config=config)
-            
-            # Save conversation to memory if available
-            if memory_client and lc_messages:
-                try:
-                    last_user_msg = next((msg.content for msg in reversed(lc_messages) if isinstance(msg, HumanMessage)), None)
-                    assistant_response = response["messages"][-1].content if response["messages"] else ""
-                    
-                    if last_user_msg and assistant_response:
-                        memory_client.create_event(
-                            memory_id=stm_memory_id,
-                            actor_id=actor_id,
-                            session_id=session_id,
-                            messages=[(last_user_msg, "USER"), (assistant_response, "ASSISTANT")]
-                        )
-                except Exception as e:
-                    logger.warning(f"Failed to save conversation to memory: {e}")
+                if last_user_msg and assistant_response:
+                    memory_client.create_event(
+                        memory_id=stm_memory_id,
+                        actor_id=actor_id,
+                        session_id=session_id,
+                        messages=[(last_user_msg, "USER"), (assistant_response, "ASSISTANT")]
+                    )
+            except Exception as e:
+                logger.warning(f"Failed to save conversation to memory: {e}")
         # Extract response
         last_message = response["messages"][-1]
         tools_used = []
@@ -294,7 +226,7 @@ class LangGraphAgentService(AgentService):
                     metadata={
                         "blocked_categories": ",".join(output_result.blocked_categories)
                     },
-                    trace_id=trace_id,
+                    trace_id=None,
                 )
 
         # Add trace metadata
@@ -313,7 +245,7 @@ class LangGraphAgentService(AgentService):
             agent_type=request.agent_type,
             tools_used=tools_used,
             metadata=metadata,
-            trace_id=trace_id
+            trace_id=None
         )
 
     async def stream_response(self, request: AgentRequest):

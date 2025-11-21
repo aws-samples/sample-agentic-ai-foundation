@@ -20,4 +20,4 @@ RUN uv sync --no-dev
 EXPOSE 8080
 
 # Start the CX Agent service
-CMD ["opentelemetry-instrument", "python", "-m", "cx_agent_backend"]
+CMD ["python", "-m", "cx_agent_backend"]
